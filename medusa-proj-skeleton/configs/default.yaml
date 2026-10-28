@@ -1,0 +1,51 @@
+# Conditional Acceptance Calibration for Dynamic Medusa Decoding — default config
+
+seed: 0
+out_dir: outputs
+
+model:
+  name: FasterDecoding/medusa-vicuna-7b-v1.3   # public Medusa-1 checkpoint, all weights frozen
+  dtype: float16
+  device_map: auto
+  load_in_4bit: false      # try true if laptop GPU memory is short (re-collect traces if you switch!)
+
+traces:
+  topk: 10                 # must equal medusa.model.utils.TOPK
+  max_new_tokens: 256
+  keep_tokens: false       # store top-K token ids too (debugging; bigger files)
+  calib:
+    dataset: alpacaeval
+    n_prompts: 300         # start small (~2 h on one GPU?); raise once timing is known
+    file: traces/calib.npz
+  eval:
+    dataset: mtbench
+    path: data/mt_bench_question.jsonl   # FastChat llm_judge question file
+    n_prompts: 80
+    file: traces/eval.npz
+  # synthetic stand-in so the whole pipeline runs without a GPU
+  synthetic:
+    n_prompts_calib: 300
+    n_prompts_eval: 80
+    steps_per_prompt: 120
+    n_heads: 5
+    dependence: 1.0        # 0 = independent heads (sanity: conditional == product)
+
+estimators:
+  val_frac: 0.8            # prompt-level split of calibration traces: fit / held-out calibration check
+  count_cond:  {alpha: 20.0}
+  logistic_cond: {C: 1.0, rank_cap: 4}
+  direct:      {C: 1.0, rank_cap: 4, monotone: true}
+  pool:                    # candidate pool for the direct classifier + shared Brier evaluation
+    reference: medusa_plus
+    budget: 64
+    n_steps: 4000
+
+compare:
+  budgets: [8, 16, 32, 63, 96]   # 63 = size of Medusa's default vicuna_7b tree
+  eval_steps: 6000                # subsample eval steps for speed (null = all)
+
+speed:
+  n_prompts: 40
+  max_new_tokens: 256
+  budget: 63
+  warmup_prompts: 2

@@ -1,0 +1,7 @@
+-r requirements.txt
+torch>=2.1
+# Medusa pins an older transformers; install Medusa first and let it choose:
+git+https://github.com/FasterDecoding/Medusa.git
+datasets>=2.14
+accelerate
+bitsandbytes   # only needed for model.load_in_4bit=true
