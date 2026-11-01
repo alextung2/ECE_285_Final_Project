@@ -21,6 +21,9 @@ from __future__ import annotations
 
 def load_medusa(cfg: dict):
     import torch
+    import zipfile
+    from unittest.mock import patch
+    import transformers.modeling_utils as modeling_utils
     from medusa.model.medusa_model import MedusaModel
 
     mcfg = cfg["model"]
@@ -31,12 +34,27 @@ def load_medusa(cfg: dict):
         # traces AND online decoding both use the same quantized model; never mix.
         from transformers import BitsAndBytesConfig
         kwargs["quantization_config"] = BitsAndBytesConfig(
-            load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16, bnb_4bit_quant_type="nf4")
-    model = MedusaModel.from_pretrained(mcfg["name"], **kwargs)
+            load_in_4bit=True, bnb_4bit_compute_dtype=torch.float16, bnb_4bit_quant_type="nf4",
+            bnb_4bit_use_double_quant=True, llm_int8_skip_modules=["lm_head", "medusa_head"])
+    # Match the notebook loader's memory mapping so a full shard is not copied
+    # into RAM on a small Colab host. Restore the library function immediately.
+    original_load = modeling_utils.load_state_dict
+    def load_mapped(checkpoint_file):
+        if str(checkpoint_file).endswith('.bin') and zipfile.is_zipfile(checkpoint_file):
+            return torch.load(checkpoint_file, map_location='cpu', mmap=True, weights_only=True)
+        return original_load(checkpoint_file)
+    with patch.object(modeling_utils, 'load_state_dict', load_mapped):
+        model = MedusaModel.from_pretrained(mcfg["name"], **kwargs)
+    if mcfg.get("load_in_4bit", False):
+        if model.lm_head.weight.dtype != torch.float16 or any(
+            p.dtype != torch.float16 for p in model.medusa_head.parameters()
+        ):
+            raise RuntimeError("Work-plan settings require fp16 lm_head and Medusa heads")
     model.eval()
     for p in model.parameters():       # backbone AND heads stay frozen
         p.requires_grad_(False)
     tokenizer = model.get_tokenizer()
+    print(f"Loaded {mcfg['name']}; GPU tensors: {torch.cuda.memory_allocated()/2**30:.2f} GiB", flush=True)
     return model, tokenizer
 
 

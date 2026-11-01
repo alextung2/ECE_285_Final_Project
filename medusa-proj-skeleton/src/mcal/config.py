@@ -7,7 +7,7 @@ import yaml
 
 def load_config(path: str | Path = "configs/default.yaml", overrides: list[str] | None = None) -> dict:
     """Load YAML config; overrides like ["traces.topk=10", "seed=1"]."""
-    with open(path) as f:
+    with open(path, encoding="utf-8-sig") as f:
         cfg = yaml.safe_load(f)
     for ov in overrides or []:
         key, val = ov.split("=", 1)

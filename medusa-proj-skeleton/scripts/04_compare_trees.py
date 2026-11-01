@@ -10,6 +10,7 @@ Differences vs. the relevant baseline come with prompt-level bootstrap 95% CIs.
 These are TRACE-ONLY numbers: never report them as measured speedups.
 """
 
+import json
 import numpy as np
 from _common import parse, write_table
 
@@ -20,7 +21,7 @@ def main():
     from mcal.estimators import Scorer
     from mcal.evaluate import evaluate_tree_policy, paired_bootstrap
     from mcal.traces import TraceSet
-    from mcal.tree import fixed_tree
+    from mcal.tree import fixed_tree, validate_choices
 
     calib = TraceSet.load(out_path(cfg, cfg["traces"]["calib"]["file"]))
     fit, _ = calib.split_by_prompt(cfg["estimators"]["val_frac"], seed=cfg["seed"])
@@ -43,21 +44,42 @@ def main():
     for B in cfg["compare"]["budgets"]:
         res = {}
         for name, kind, _ in plan:
-            ft = fixed_tree(S[name], fit, B) if kind == "fixed" else None
+            ft = None
+            if kind == "fixed":
+                handoff = out_path(cfg, "models", f"fixed_tree_{name}_B{B}.json")
+                if handoff.exists():
+                    choices = validate_choices(json.loads(handoff.read_text()), fit.n_heads, fit.topk)
+                    if len(choices) != B:
+                        raise ValueError(f"Wrong budget in {handoff}")
+                    scores, ft = {(): 1.0}, []
+                    for choice in choices:
+                        p = tuple(choice)
+                        score = float(S[name].child_scores(fit, None, p[:-1], scores[p[:-1]])[p[-1]])
+                        if not np.isfinite(score) or not 0 <= score <= scores[p[:-1]] + 1e-8:
+                            raise ValueError(f"Invalid fixed-tree score in {handoff}")
+                        scores[p] = score
+                        ft.append((p, score))
+                else:
+                    ft = fixed_tree(S[name], fit, B)
             res[name] = evaluate_tree_policy(S[name], ev, B, fixed=ft, steps=steps)
         for name, kind, base in plan:
             r = res[name]
             row = dict(budget=B, tree=kind, method=name, accepted=r["mean_accepted"],
                        sem=r["sem_accepted"], predicted=r["mean_predicted"],
                        build_ms=r["tree_build_ms"])
+            _, alo, ahi = paired_bootstrap(r["per_step_accepted"],
+                                          np.zeros_like(r["per_step_accepted"]), groups,
+                                          seed=cfg["seed"])
+            row.update(accepted_ci_lo=alo, accepted_ci_hi=ahi,
+                       source="synthetic" if args.synthetic else "real_traces")
             if base:
                 d, lo, hi = paired_bootstrap(r["per_step_accepted"], res[base]["per_step_accepted"], groups)
                 row.update(delta_vs=base, delta=d, ci_lo=lo, ci_hi=hi)
             rows.append(row)
-            curves.setdefault(name, []).append(r["mean_accepted"])
+            curves.setdefault(name, []).append((r["mean_accepted"], alo, ahi))
         print(f"B={B}: " + ", ".join(f"{n}={res[n]['mean_accepted']:.3f}" for n, _, _ in plan))
 
-    cols = ["budget", "tree", "method", "accepted", "sem", "predicted", "delta_vs", "delta",
+    cols = ["source", "budget", "tree", "method", "accepted", "accepted_ci_lo", "accepted_ci_hi", "sem", "predicted", "delta_vs", "delta",
             "ci_lo", "ci_hi", "build_ms"]
     print(write_table(rows, out_path(cfg, "results", "tree_comparison.csv"), cols))
 
@@ -66,7 +88,10 @@ def main():
     import matplotlib.pyplot as plt
     fig, ax = plt.subplots(figsize=(5.5, 4))
     for name, kind, _ in plan:
-        ax.plot(cfg["compare"]["budgets"], curves[name], "o-" if kind == "dynamic" else "s--", label=name)
+        values = np.array(curves[name])
+        ax.plot(cfg["compare"]["budgets"], values[:, 0], "o-" if kind == "dynamic" else "s--", label=name)
+        ax.fill_between(cfg["compare"]["budgets"], values[:, 1], values[:, 2], alpha=0.12)
+    ax.set_title("Synthetic pipeline check" if args.synthetic else "Trace acceptance comparison")
     ax.set_xlabel("tree budget B (draft nodes)"), ax.set_ylabel("accepted tokens / step (trace-sim.)")
     ax.legend(fontsize=8)
     fig.tight_layout()

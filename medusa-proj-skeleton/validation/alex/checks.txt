@@ -1,0 +1,11 @@
+python -m pytest medusa-proj-skeleton/tests -q
+36 passed in 3.33s
+
+python -m pip check
+No broken requirements found.
+
+python -m compileall -q medusa-proj-skeleton/src medusa-proj-skeleton/scripts medusa-proj-skeleton/tests
+Passed.
+
+git diff --check
+Passed.
