@@ -2,7 +2,7 @@
 
 This checkout contains Alex's implementation and validation tools. Run commands
 from `medusa-proj-skeleton` using `../.venv/Scripts/python.exe` on this laptop.
-The local branch is `codex/alex-tree-performance`.
+The review branch on GitHub is `codex/alex-tree-performance`.
 
 ## What can run without partner files
 

@@ -34,8 +34,8 @@ was traced to an exact tie in the dynamic verification logits.
    agreed MT-Bench prompts and output limits.
 5. Write the results and conclusions from those experiments. The methods section
    already has a draft.
-6. Share the code with the team. It is currently committed locally on
-   `codex/alex-tree-performance`; it has not been pushed to GitHub.
+6. Review the code with the team on GitHub branch
+   `codex/alex-tree-performance` before merging into `main`.
 
 ## Suggested spoken update
 
