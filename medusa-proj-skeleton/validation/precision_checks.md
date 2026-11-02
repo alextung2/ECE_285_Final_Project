@@ -61,6 +61,19 @@ were also compiled successfully and remain byte-for-byte unchanged from main.
 
 ## Real validation: not run
 
+## CPU handoff audit follow-up (2026-11-02)
+
+Full regression suite: **60 passed, 2 skipped** (Medusa/FastChat dependencies
+unavailable). Ten added audit cases cover read-only NPZ loading, invalid arrays,
+split overlap, incompatible contracts, and missing runtime provenance.
+The new CLI successfully audited the existing synthetic 400-step calibration
+and 160-step evaluation files. A `.json` input path was deliberately rejected
+with exit code 1 and an explicit failure report. These checks do not validate
+Lucia's actual data: no pilot artifacts were found on the three remote branch
+heads or in accessible Drive search. No labels were converted or invented.
+
+### GPU status
+
 `torch.cuda.is_available()` returned false; `nvidia-smi` was unavailable.
 
 ```sh

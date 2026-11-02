@@ -256,6 +256,34 @@ peaks likewise must not be compared as isolated decode peaks.
 
 ## Verification in this change
 
+### CPU-only trace handoff audit
+
+Before fitting real data, run this read-only check (choose a new report path):
+
+```sh
+python scripts/10_audit_traces.py --calib /path/calib.npz --eval /path/eval.npz --report /path/new_audit.json --set model.precision_mode=nf4_fp32_from_fp16
+```
+
+It checks shapes, integer rank labels, finite probabilities and top-K mass,
+candidate ordering/IDs, duplicate states, precision/runtime provenance, and
+compatible calibration/evaluation contracts. Same-dataset overlapping prompt IDs
+are rejected. IDs from different datasets are not comparable: retain prompt
+manifests to check text overlap. The report hashes input files and never rewrites
+them. Missing dataset/revision/token IDs produce explicit limitations.
+
+A passing audit establishes structural compatibility only; it does not establish
+label truth, source authenticity, or offline/online GPU agreement. Pilot node JSON
+is rejected without manufacturing missing labels or probabilities. Synthetic
+fixtures require `--synthetic` and cannot certify real traces.
+
+As of the 2026-11-02 repository check, none of the three branch heads, releases,
+or pull requests supplied Lucia's pilot trace artifacts; the accessible Drive
+search also found none. Lucia should share the original pilot JSON, settings,
+prompt manifest and precision report for evidence, plus complete `.npz` traces
+from the shared collector (or the richer export described above) for fitting.
+Ada can continue scorer development while that handoff and GPU validation remain
+pending. No GPU is needed to run this audit or the synthetic estimator pipeline.
+
 CPU environment: Windows, Python 3.13, PyTorch 2.13.0+cpu. CUDA is unavailable;
 `nvidia-smi` is absent. The real validation command exits with
 `CUDA unavailable: real precision validation NOT RUN`. No GPU correctness,
