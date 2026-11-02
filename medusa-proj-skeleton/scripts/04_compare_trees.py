@@ -24,9 +24,14 @@ def main():
     from mcal.tree import fixed_tree, validate_choices
 
     calib = TraceSet.load(out_path(cfg, cfg["traces"]["calib"]["file"]))
-    fit, _ = calib.split_by_prompt(cfg["estimators"]["val_frac"], seed=cfg["seed"])
+    from mcal.handoff import split_calibration
+    fit, _ = split_calibration(calib, cfg["estimators"].get("manifest"), cfg["estimators"]["val_frac"], cfg["seed"])
     ev = TraceSet.load(out_path(cfg, cfg["traces"]["eval"]["file"]))
     from mcal.precision import require_trace_config, require_compatible
+    from mcal.audit import audit_file, audit_pair
+    audit_file(out_path(cfg, cfg["traces"]["calib"]["file"]), cfg, args.synthetic)
+    audit_file(out_path(cfg, cfg["traces"]["eval"]["file"]), cfg, args.synthetic)
+    audit_pair(calib, ev)
     contract = require_trace_config(calib, cfg, args.synthetic)
     require_compatible(contract, require_trace_config(ev, cfg, args.synthetic))
     S = {n: Scorer.load(out_path(cfg, "models", f"{n}.pkl"))

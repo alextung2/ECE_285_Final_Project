@@ -32,11 +32,13 @@ traces:
     dependence: 1.0        # 0 = independent heads (sanity: conditional == product)
 
 estimators:
+  manifest: null          # required for real data: train_prompt_ids / validation_prompt_ids
   val_frac: 0.8            # prompt-level split of calibration traces: fit / held-out calibration check
   count_cond:  {alpha: 20.0}
   logistic_cond: {C: 1.0, rank_cap: 4}
   direct:      {C: 1.0, rank_cap: 4, monotone: true}
   pool:                    # candidate pool for the direct classifier + shared Brier evaluation
+    self_retrain: false    # Ada: optional union of MEDUSA+ and first-round direct trees
     reference: medusa_plus
     budget: 64
     n_steps: 4000

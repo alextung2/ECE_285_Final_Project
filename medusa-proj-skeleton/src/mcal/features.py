@@ -16,6 +16,8 @@ from .traces import TraceSet
 
 EPS = 1e-6
 
+FEATURE_SCHEMA = "ada_grouped_v1"
+
 
 @dataclass
 class NodeBatch:
@@ -79,14 +81,19 @@ def conditional_nodes(traces: TraceSet, max_rank: int | None = None) -> tuple[No
 
 def candidate_pool_nodes(traces: TraceSet, scorer, budget: int, n_steps: int | None = None,
                          seed: int = 0) -> tuple[NodeBatch, np.ndarray]:
-    """Nodes from a reference tree per step (default: MEDUSA+ prob product).
+    """Nodes from reference trees per step (default: MEDUSA+ prob product).
 
     Used to (i) train the direct classifier, whose label is full-prefix
     acceptance S_v on nodes whose parents may have failed, and (ii) compute
     path-level Brier scores on the *same* candidate set for every method.
+
+    `scorer` may be a list of scorers: each step then contributes the UNION of
+    their trees (duplicates removed), e.g. [MedusaPlusProb(), direct_v1] to
+    retrain the direct classifier on nodes its own trees pick.
     """
     from .tree import select_tree  # local import to avoid cycle
 
+    scorers = scorer if isinstance(scorer, (list, tuple)) else [scorer]
     rng = np.random.default_rng(seed)
     idx = np.arange(traces.n_steps)
     if n_steps is not None and n_steps < len(idx):
@@ -94,10 +101,15 @@ def candidate_pool_nodes(traces: TraceSet, scorer, budget: int, n_steps: int | N
     H = traces.n_heads
     steps, paths, depths = [], [], []
     for s in idx:
-        for path, _ in select_tree(scorer, traces, int(s), budget):
-            row = np.full(H, -1, dtype=np.int16)
-            row[: len(path)] = path
-            steps.append(s), paths.append(row), depths.append(len(path))
+        seen = set()
+        for sc in scorers:
+            for path, _ in select_tree(sc, traces, int(s), budget):
+                if path in seen:
+                    continue
+                seen.add(path)
+                row = np.full(H, -1, dtype=np.int16)
+                row[: len(path)] = path
+                steps.append(s), paths.append(row), depths.append(len(path))
     nb = NodeBatch(np.array(steps), np.stack(paths), np.array(depths, dtype=np.int16))
     return nb, traces.is_accepted(nb.step, nb.path, nb.depth)
 
@@ -106,22 +118,28 @@ def candidate_pool_nodes(traces: TraceSet, scorer, budget: int, n_steps: int | N
 # Feature map (shared by logistic-conditional and direct classifier)
 # ---------------------------------------------------------------------------
 
+FEATURE_GROUPS = ("depth", "own_rank", "parent_rank", "confidence", "path_prob",
+                  "uncertainty", "interactions")
+
+
 def _entropy(p: np.ndarray) -> np.ndarray:
     q = np.clip(p, EPS, 1.0)
     return -(q * np.log(q)).sum(-1)
 
 
-def node_features(traces: TraceSet, nb: NodeBatch, rank_cap: int = 4) -> np.ndarray:
+def node_features(traces: TraceSet, nb: NodeBatch, rank_cap: int = 4,
+                  drop: tuple = ()) -> np.ndarray:
     """Features from the proposal: ranks, confidence, depth, parent-child interactions.
 
     All features are computable before verification (no gold info).
+    `drop` removes whole groups (names in FEATURE_GROUPS) for ablations.
     Returns float32 [M, F].
     """
     H = traces.n_heads
     M = len(nb)
     d0 = nb.depth.astype(np.int64) - 1                 # 0-based head index
     r = nb.own_rank.astype(np.int64)
-    pr = nb.parent_rank.astype(np.int64)
+    pr = nb.parent_rank.astype(np.int64)               # -1 = parent is the root token
     has_parent = (nb.depth > 1).astype(np.float32)
 
     probs = traces.topk_prob[nb.step]                  # [M, H, K]
@@ -140,20 +158,23 @@ def node_features(traces: TraceSet, nb: NodeBatch, rank_cap: int = 4) -> np.ndar
 
     def onehot(v, n):
         out = np.zeros((M, n), dtype=np.float32)
-        out[np.arange(M), np.clip(v, 0, n - 1)] = 1
+        out[np.arange(M), v] = 1
         return out
 
-    feats = [
-        onehot(d0, H),                                 # depth
-        onehot(r, rank_cap + 1),                       # own rank (capped)
-        onehot(np.where(has_parent > 0, pr, rank_cap + 1), rank_cap + 2),  # parent rank (+ "root")
-        lp[:, None], lpp[:, None],                     # confidences
-        log_path_p[:, None],                           # joint (product) confidence of the path
-        (own_p / (head_top1 + EPS))[:, None],          # relative confidence within head
-        head_ent[:, None],                             # head uncertainty
-        np.log(traces.root_prob[nb.step] + EPS)[:, None],
-        (lp * lpp)[:, None],                           # parent-child interaction
-        ((r == 0) & (pr <= 0)).astype(np.float32)[:, None],  # "both top-1" interaction
-        (lp * d0)[:, None],                            # confidence x depth
-    ]
+    col = lambda v: np.asarray(v, dtype=np.float32)[:, None]
+    groups = {
+        "depth": [onehot(d0, H)],
+        # ranks above rank_cap share one bucket; the parent's extra bucket is "root"
+        "own_rank": [onehot(np.minimum(r, rank_cap), rank_cap + 1)],
+        "parent_rank": [onehot(np.where(has_parent > 0, np.minimum(pr, rank_cap), rank_cap + 1),
+                               rank_cap + 2)],
+        "confidence": [col(lp), col(lpp), col(own_p / (head_top1 + EPS))],
+        "path_prob": [col(log_path_p)],
+        "uncertainty": [col(head_ent), col(np.log(traces.root_prob[nb.step] + EPS))],
+        "interactions": [col(lp * lpp), col((r == 0) & (pr <= 0)), col(lp * d0)],
+    }
+    unknown = set(drop) - set(groups)
+    if unknown:
+        raise ValueError(f"unknown feature groups {unknown}; choose from {FEATURE_GROUPS}")
+    feats = [f for name in FEATURE_GROUPS if name not in drop for f in groups[name]]
     return np.concatenate(feats, axis=1).astype(np.float32)

@@ -96,6 +96,11 @@ class TraceSet:
         a = np.isin(self.prompt_id, prompts[:n_a])
         return self.subset(np.where(a)[0]), self.subset(np.where(~a)[0])
 
+    def split_by_prompt_ids(self, ids_a):
+        """Ada's fixed-ID split; final manifest checks live in mcal.handoff."""
+        a = np.isin(self.prompt_id, np.asarray(list(ids_a)))
+        return self.subset(np.where(a)[0]), self.subset(np.where(~a)[0])
+
     # ---- I/O ------------------------------------------------------------
     def save(self, path: str | Path) -> None:
         path = Path(path)
@@ -191,6 +196,7 @@ def make_synthetic_traces(
         top1 = 1 / (1 + np.exp(-conf_logit))
         tail = rng.dirichlet(np.ones(K - 1) * 0.6, size=N)
         tail = -np.sort(-tail, axis=1) * (1 - top1)[:, None] * 0.9
+        tail = np.minimum(tail, top1[:, None])  # Ada: maintain descending candidate ranks
         topk_prob[:, j, 0] = top1
         topk_prob[:, j, 1:] = tail
 
