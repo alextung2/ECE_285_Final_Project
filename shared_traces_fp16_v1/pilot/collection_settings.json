@@ -1,0 +1,320 @@
+{
+  "schema_version": 1,
+  "collector_sha256": "3d4c78af87d9e4214204855d33f9f0403ff2a070c774bdfb69af0ee83eb510dd",
+  "loader_sha256": "c81520d4c024af023e856170fc91b6b575af1c1b6b50e4567f1f109e419cb557",
+  "pilot_prompts_sha256": "0f9c63a6f6796be2b2005034ba5070e56b5dbe4b99092a512dd21aa252d6171f",
+  "train_prompts_sha256": "76c2b2705e3cd09c02df45a5f4d4694380217918d5bc5efda27c3d4f0b56aa0b",
+  "validation_prompts_sha256": "fedfb80788d014fef8a6c1b9cd554d436ddcbeb1b14ac2b4b34d9798f1737f27",
+  "dataset_revision": "2edc6fad8be6b14ea7230aabfd08188da6b8b814",
+  "model_id": "FasterDecoding/medusa-vicuna-7b-v1.3",
+  "medusa_git_commit": "e2a5d20c048a9b0a4092e6933c34313687422518",
+  "backbone_config_commit": "236eeeab96f0dc2e463f2bebb7bb49809279c6d6",
+  "python": "3.11.17",
+  "packages": {
+    "torch": "2.2.2+cu121",
+    "transformers": "4.36.2",
+    "bitsandbytes": "0.43.3",
+    "accelerate": "0.27.2",
+    "fschat": "0.2.36",
+    "numpy": "1.26.4"
+  },
+  "cuda_runtime": "12.1",
+  "gpu": "Tesla T4",
+  "precision": "NF4_double_quant_FP16_compute_FP16_heads",
+  "conversation_template": "vicuna_v1.1",
+  "max_new_tokens": 64,
+  "temperature": 0.0,
+  "topk": 10,
+  "n_heads": 5,
+  "tree_choices_zero_based": [
+    [
+      0
+    ],
+    [
+      0,
+      0
+    ],
+    [
+      1
+    ],
+    [
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      0
+    ],
+    [
+      1,
+      0
+    ],
+    [
+      2
+    ],
+    [
+      0,
+      2
+    ],
+    [
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      3
+    ],
+    [
+      3
+    ],
+    [
+      0,
+      1,
+      0
+    ],
+    [
+      2,
+      0
+    ],
+    [
+      4
+    ],
+    [
+      0,
+      0,
+      2
+    ],
+    [
+      0,
+      4
+    ],
+    [
+      1,
+      1
+    ],
+    [
+      1,
+      0,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      0
+    ],
+    [
+      5
+    ],
+    [
+      0,
+      0,
+      3
+    ],
+    [
+      0,
+      5
+    ],
+    [
+      0,
+      2,
+      0
+    ],
+    [
+      3,
+      0
+    ],
+    [
+      0,
+      1,
+      1
+    ],
+    [
+      0,
+      6
+    ],
+    [
+      6
+    ],
+    [
+      0,
+      7
+    ],
+    [
+      0,
+      0,
+      4
+    ],
+    [
+      4,
+      0
+    ],
+    [
+      1,
+      2
+    ],
+    [
+      0,
+      8
+    ],
+    [
+      7
+    ],
+    [
+      0,
+      3,
+      0
+    ],
+    [
+      0,
+      0,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      5
+    ],
+    [
+      2,
+      1
+    ],
+    [
+      0,
+      0,
+      6
+    ],
+    [
+      1,
+      0,
+      1
+    ],
+    [
+      0,
+      0,
+      1,
+      0
+    ],
+    [
+      2,
+      0,
+      0
+    ],
+    [
+      5,
+      0
+    ],
+    [
+      0,
+      9
+    ],
+    [
+      0,
+      1,
+      2
+    ],
+    [
+      8
+    ],
+    [
+      0,
+      4,
+      0
+    ],
+    [
+      0,
+      2,
+      1
+    ],
+    [
+      1,
+      3
+    ],
+    [
+      0,
+      0,
+      7
+    ],
+    [
+      0,
+      0,
+      0,
+      2
+    ],
+    [
+      0,
+      0,
+      8
+    ],
+    [
+      1,
+      1,
+      0
+    ],
+    [
+      0,
+      1,
+      0,
+      0
+    ],
+    [
+      6,
+      0
+    ],
+    [
+      9
+    ],
+    [
+      0,
+      1,
+      3
+    ],
+    [
+      0,
+      0,
+      0,
+      3
+    ],
+    [
+      1,
+      0,
+      2
+    ],
+    [
+      0,
+      5,
+      0
+    ],
+    [
+      3,
+      1
+    ],
+    [
+      0,
+      0,
+      2,
+      0
+    ],
+    [
+      7,
+      0
+    ],
+    [
+      1,
+      4
+    ]
+  ],
+  "draft_budget_excluding_root": 63,
+  "tree_nodes_including_root": 64,
+  "label_source": "final accepted Medusa sequence, not uncached greedy",
+  "sampling": "default-tree online verification-round start positions",
+  "tail_policy": "Preserve all rounds in JSON; export only rounds with all five future targets observed.",
+  "rank_convention": "zero-based; -1 means observed target absent from top-10",
+  "position_convention": "zero-based generated index of the root token",
+  "split": "pilot_subset_of_training",
+  "timing_benchmark": false,
+  "scope": "Offline scores on recorded contexts; dynamic-policy performance requires online validation."
+}

@@ -1,0 +1,16 @@
+{
+  "completed_prompts": 20,
+  "exported_prompts": 20,
+  "exact_token_matches": 19,
+  "mismatched_prompts": 1,
+  "recorded_rounds": 547,
+  "exported_rounds": 498,
+  "censored_rounds_not_exported": 49,
+  "total_generated_tokens": 1227,
+  "online_tokens_per_round_all": 2.243144424131627,
+  "online_tokens_per_round_exported": 2.289156626506024,
+  "simulated_tokens_per_round_exported": 2.289156626506024,
+  "simulation_disagreements_all": 0,
+  "simulation_disagreements_exported": 0,
+  "complete_pilot": true
+}
