@@ -22,7 +22,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from .traces import TraceSet
-from .tree import select_tree, tree_to_medusa_choices
+from .tree import select_tree, tree_to_medusa_choices, validate_choices
 
 
 # ---------------------------------------------------------------------------
@@ -33,7 +33,7 @@ class StaticTree:
     """Fixed medusa_choices (original Medusa, or our count-based fixed tree)."""
 
     def __init__(self, medusa_choices):
-        self.choices = [list(c) for c in medusa_choices]
+        self.choices = validate_choices(medusa_choices)
         self.dynamic = False
 
     def __call__(self, medusa_logits_last, logits_last):
@@ -54,7 +54,9 @@ class DynamicTree:
     def __call__(self, medusa_logits_last, logits_last):
         import torch
         hp = torch.softmax(medusa_logits_last.float(), -1)            # [H, V]
-        top_p = hp.topk(self.topk, -1).values.cpu().numpy()[None]     # [1, H, K]
+        # Match upstream candidate rank ordering, including ties in fp16 logits.
+        ranks = medusa_logits_last.topk(self.topk, -1).indices
+        top_p = hp.gather(-1, ranks).cpu().numpy()[None]     # [1, H, K]
         root = torch.softmax(logits_last.float(), -1).max().item()
         H = top_p.shape[1]
         ts = TraceSet(gold_rank=np.zeros((1, H), np.int16), topk_prob=top_p.astype(np.float32),
@@ -74,6 +76,7 @@ class DecodeStats:
     wall_s: float = 0.0
     tree_s: float = 0.0            # policy + buffer construction
     accept_lengths: list = field(default_factory=list)   # accepted tokens per step (incl. g_0)
+    raw_accept_lengths: list = field(default_factory=list)
 
     @property
     def tokens_per_s(self):
@@ -84,7 +87,15 @@ class DecodeStats:
         return float(np.mean(self.accept_lengths)) if self.accept_lengths else float("nan")
 
 
-def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256):
+def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256,
+                           profile_tree: bool = False, max_steps: int | None = None):
+    import torch
+    with torch.inference_mode():
+        return _medusa_greedy_generate(model, input_ids, policy, max_new_tokens,
+                                       profile_tree, max_steps)
+
+
+def _medusa_greedy_generate(model, input_ids, policy, max_new_tokens, profile_tree, max_steps):
     """Returns (output_ids [1, L], DecodeStats). Greedy verification only."""
     import torch
     from medusa.model.kv_cache import initialize_past_key_values
@@ -96,6 +107,10 @@ def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256):
     dev = model.base_model.device
     input_ids = input_ids.clone().to(dev)
     stats = DecodeStats()
+    if max_new_tokens < 0:
+        raise ValueError("max_new_tokens must be nonnegative")
+    if max_new_tokens == 0:
+        return input_ids, stats
     cache = {}
 
     def buffers_for(choices):
@@ -107,6 +122,8 @@ def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256):
         return cache[key]
 
     pkv, pkv_data, cur_len = initialize_past_key_values(model.base_model)
+    if not policy.dynamic:
+        buffers_for(policy.choices)  # fixed pattern setup is outside generation timing
     torch.cuda.synchronize()
     t_start = time.perf_counter()
 
@@ -116,10 +133,16 @@ def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256):
     input_len, new_token = input_ids.shape[1], 0
 
     while new_token < max_new_tokens:
+        if max_steps is not None and stats.steps >= max_steps:
+            break
+        if profile_tree:
+            torch.cuda.synchronize()
         t0 = time.perf_counter()
         choices = policy(medusa_logits[:, 0, -1], logits[0, -1])
         bufs = buffers_for(choices)
         model.base_model.model.medusa_mask = bufs["medusa_attn_mask"]
+        if profile_tree:
+            torch.cuda.synchronize()
         stats.tree_s += time.perf_counter() - t0
 
         candidates, tree_candidates = generate_candidates(
@@ -127,6 +150,14 @@ def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256):
         medusa_logits, logits, outputs = tree_decoding(
             model, tree_candidates, pkv, bufs["medusa_position_ids"], input_ids, bufs["retrieve_indices"])
         best, acc_len = evaluate_posterior(logits, candidates, 0.0)
+        stats.raw_accept_lengths.append(int(acc_len) + 1)
+        # Enforce the same token and first-EOS boundaries as ordinary greedy.
+        count = min(int(acc_len) + 1, max_new_tokens - int(new_token))
+        chosen = candidates[best, :count]
+        eos = (chosen == model.tokenizer.eos_token_id).nonzero()
+        if eos.numel():
+            count = int(eos[0].item()) + 1
+        acc_len = count - 1
         input_ids, logits, medusa_logits, new_token = update_inference_inputs(
             input_ids, candidates, best, acc_len, bufs["retrieve_indices"], outputs,
             logits, medusa_logits, new_token, pkv_data, cur_len)
@@ -138,6 +169,7 @@ def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256):
     torch.cuda.synchronize()
     stats.wall_s = time.perf_counter() - t_start
     stats.new_tokens = input_ids.shape[1] - input_len
+    reset_medusa_mode(model)
     return input_ids, stats
 
 
@@ -152,18 +184,23 @@ def plain_greedy_generate(model, input_ids, max_new_tokens: int = 256):
     reset_medusa_mode(model)
     pkv, _, _ = initialize_past_key_values(model.base_model)
     stats = DecodeStats()
+    if max_new_tokens < 0:
+        raise ValueError("max_new_tokens must be nonnegative")
+    if max_new_tokens == 0:
+        return ids, stats
     torch.cuda.synchronize()
     t0 = time.perf_counter()
     with torch.inference_mode():
         out = model.base_model(input_ids=ids, past_key_values=pkv)
-        for _ in range(max_new_tokens):
+        for i in range(max_new_tokens):
             nxt = out.logits[:, -1].argmax(-1, keepdim=True)
             ids = torch.cat([ids, nxt], dim=1)
             stats.steps += 1
             stats.accept_lengths.append(1)
             if nxt.item() == model.tokenizer.eos_token_id:
                 break
-            out = model.base_model(input_ids=nxt, past_key_values=pkv)
+            if i + 1 < max_new_tokens:
+                out = model.base_model(input_ids=nxt, past_key_values=pkv)
     torch.cuda.synchronize()
     stats.wall_s = time.perf_counter() - t0
     stats.new_tokens = ids.shape[1] - input_ids.shape[1]

@@ -1,0 +1,92 @@
+{
+  "config": {
+    "seed": 0,
+    "out_dir": "outputs/laptop_smoke",
+    "model": {
+      "name": "FasterDecoding/medusa-vicuna-7b-v1.3",
+      "dtype": "float16",
+      "device_map": "auto",
+      "load_in_4bit": true
+    },
+    "traces": {
+      "topk": 10,
+      "max_new_tokens": 256,
+      "keep_tokens": false,
+      "calib": {
+        "dataset": "alpacaeval",
+        "n_prompts": 300,
+        "file": "traces/calib.npz"
+      },
+      "eval": {
+        "dataset": "mtbench",
+        "path": "data/mt_bench_question.jsonl",
+        "n_prompts": 80,
+        "file": "traces/eval.npz"
+      },
+      "synthetic": {
+        "n_prompts_calib": 300,
+        "n_prompts_eval": 80,
+        "steps_per_prompt": 120,
+        "n_heads": 5,
+        "dependence": 1.0
+      }
+    },
+    "estimators": {
+      "val_frac": 0.8,
+      "count_cond": {
+        "alpha": 20.0
+      },
+      "logistic_cond": {
+        "C": 1.0,
+        "rank_cap": 4
+      },
+      "direct": {
+        "C": 1.0,
+        "rank_cap": 4,
+        "monotone": true
+      },
+      "pool": {
+        "reference": "medusa_plus",
+        "budget": 64,
+        "n_steps": 4000
+      }
+    },
+    "compare": {
+      "budgets": [
+        8,
+        16,
+        32,
+        63,
+        96
+      ],
+      "eval_steps": 6000
+    },
+    "speed": {
+      "methods": [
+        "medusa_default",
+        "medusa_plus"
+      ],
+      "n_prompts": 5,
+      "max_new_tokens": 64,
+      "budget": 96,
+      "warmup_prompts": 1,
+      "prompt_file": "data/smoke_prompts.json"
+    }
+  },
+  "packages": {
+    "torch": "2.2.2+cu118",
+    "transformers": "4.36.2",
+    "bitsandbytes": "0.43.3",
+    "numpy": "1.26.4"
+  },
+  "platform": "Windows-10-10.0.26200-SP0",
+  "gpu": "NVIDIA GeForce RTX 3080 Ti Laptop GPU",
+  "cuda": "11.8",
+  "prompt_sha256": "ca0f133880fb0d8c60adc9d7640bd29f9b19ad1a22c31d68682378b65dca7e0b",
+  "timing": "Prefill + generation; excludes model load, tokenization, KV allocation and fixed-buffer setup.",
+  "overhead": "Separate synchronized run on first measured prompt; includes policy and buffer lookup/build.",
+  "note": "Hardware-specific preliminary results. Default tree retains its native budget; inspect draft_budget.",
+  "base_model_revision": "236eeeab96f0dc2e463f2bebb7bb49809279c6d6",
+  "medusa_heads_revision": "82ac200bf7502419cb49a9e0adcbebe3d1d293f1",
+  "medusa_source_commit": "e2a5d20c048a9b0a4092e6933c34313687422518"
+}

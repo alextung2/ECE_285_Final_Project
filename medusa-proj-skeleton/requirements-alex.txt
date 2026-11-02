@@ -1,0 +1,13 @@
+-r requirements.txt
+numpy==1.26.4
+torch==2.2.2
+transformers==4.36.2
+bitsandbytes==0.43.3
+accelerate==0.27.2
+huggingface-hub==0.25.2
+sentencepiece
+protobuf
+psutil
+# Install CUDA torch first from https://download.pytorch.org/whl/cu118.
+# Install Medusa separately with --no-deps at commit e2a5d20c048a9b0a4092e6933c34313687422518.
+fschat==0.2.36

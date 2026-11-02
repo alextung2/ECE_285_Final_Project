@@ -7,7 +7,7 @@ model:
   name: FasterDecoding/medusa-vicuna-7b-v1.3   # public Medusa-1 checkpoint, all weights frozen
   dtype: float16
   device_map: auto
-  load_in_4bit: false      # try true if laptop GPU memory is short (re-collect traces if you switch!)
+  load_in_4bit: true       # work-plan NF4 backbone; prediction heads remain fp16
 
 traces:
   topk: 10                 # must equal medusa.model.utils.TOPK
@@ -45,6 +45,7 @@ compare:
   eval_steps: 6000                # subsample eval steps for speed (null = all)
 
 speed:
+  methods: [medusa_default, medusa_plus]  # no fitted models needed; add trained methods on handoff
   n_prompts: 40
   max_new_tokens: 256
   budget: 63

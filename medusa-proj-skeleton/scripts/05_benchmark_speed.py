@@ -1,79 +1,119 @@
-"""Weeks 6-7: online end-to-end timing on MT-Bench (GPU required).
+"""Online timing. Defaults to default Medusa and MEDUSA+, without fitted models.
 
-For each policy at budget B: tokens/sec, speedup vs ordinary greedy (1.0x),
-online accepted tokens/step, tree-building overhead, and exact agreement with
-greedy output. Only these numbers may be reported as measured speedups.
-
-    python scripts/05_benchmark_speed.py
-    python scripts/05_benchmark_speed.py --set speed.budget=32 speed.n_prompts=20
+Use --set speed.methods=[medusa_default,medusa_plus,direct,logistic_cond,count_cond]
+after the fitted model handoff. Outputs include per-prompt tokens, time, exact
+agreement, environment metadata, and separately synchronized overhead profiles.
 """
-
 import json
-
+import platform
+import importlib.metadata
+import hashlib
+from dataclasses import asdict
+from pathlib import Path
 import numpy as np
 from _common import parse, write_table
 
 
-def main():
+def exact_agreement(a, b):
+    return a.shape == b.shape and bool((a.cpu() == b.cpu()).all())
+
+
+def main(model_and_tokenizer=None):
     args, cfg = parse(__doc__)
     if args.synthetic:
-        raise SystemExit("05 needs the real model; there is no synthetic mode for wall-clock timing.")
+        raise SystemExit('Timing requires a real GPU model; synthetic speedups are not supported.')
     import torch
     from mcal.collect import default_medusa_choices
     from mcal.config import out_path
     from mcal.data import load_prompts, vicuna_prompt
     from mcal.decode import DynamicTree, StaticTree, medusa_greedy_generate, plain_greedy_generate
-    from mcal.estimators import Scorer
+    from mcal.estimators import Scorer, MedusaPlusProb
     from mcal.model import load_medusa
 
-    sc, B = cfg["speed"], cfg["speed"]["budget"]
-    model, tok = load_medusa(cfg)
-    ecfg = dict(cfg["traces"]["eval"], n_prompts=sc["n_prompts"] + sc["warmup_prompts"])
-    prompts = load_prompts(ecfg)
-    load = lambda n: Scorer.load(out_path(cfg, "models", f"{n}.pkl"))
-    fixed = lambda n: json.loads(out_path(cfg, "models", f"fixed_tree_{n}_B{B}.json").read_text())
+    sc, B = cfg['speed'], cfg['speed']['budget']
+    methods = sc.get('methods', ['medusa_default', 'medusa_plus'])
+    if sc['n_prompts'] < 1 or sc['warmup_prompts'] < 1 or sc['max_new_tokens'] < 1:
+        raise ValueError('Use at least one warmup, measured prompt, and generated token.')
+    policies = {}
+    for name in methods:
+        if name == 'medusa_default':
+            policies[name] = StaticTree(default_medusa_choices())
+        elif name == 'medusa_plus':
+            policies[name] = DynamicTree(MedusaPlusProb(), B)
+        elif name in ('medusa_acc', 'count_cond'):
+            path = out_path(cfg, 'models', f'fixed_tree_{name}_B{B}.json')
+            policies[name] = StaticTree(json.loads(path.read_text()))
+            if len(policies[name].choices) != B:
+                raise ValueError(f'{path} does not contain {B} draft nodes')
+        elif name in ('direct', 'logistic_cond'):
+            policies[name] = DynamicTree(Scorer.load(out_path(cfg, 'models', f'{name}.pkl')), B)
+        else:
+            raise ValueError(f'Unknown policy: {name}')
 
-    policies = {
-        "medusa_default": StaticTree(default_medusa_choices()),
-        "medusa_acc[fixed]": StaticTree(fixed("medusa_acc")),
-        "count_cond[fixed]": StaticTree(fixed("count_cond")),
-        "medusa_plus": DynamicTree(load("medusa_plus"), B),
-        "direct": DynamicTree(load("direct"), B),
-        "logistic_cond": DynamicTree(load("logistic_cond"), B),
-    }
+    if sc.get('prompt_file'):
+        prompts = json.loads(Path(sc['prompt_file']).read_text(encoding='utf-8-sig'))
+    else:
+        ecfg = dict(cfg['traces']['eval'], n_prompts=sc['n_prompts'] + sc['warmup_prompts'])
+        if 'path' in ecfg and not Path(ecfg['path']).is_absolute():
+            ecfg['path'] = str(Path(__file__).resolve().parents[1] / ecfg['path'])
+        prompts = load_prompts(ecfg)
+    needed = sc['n_prompts'] + sc['warmup_prompts']
+    if len(prompts) < needed:
+        raise ValueError(f'Need {needed} prompts, found {len(prompts)}')
+    prompts = prompts[:needed]
+    model, tok = model_and_tokenizer or load_medusa(cfg)
+    encode = lambda p: tok([vicuna_prompt(p)], return_tensors='pt').input_ids
+    records = []
+    rng = np.random.default_rng(cfg['seed'])
+    # Pair all policies on each prompt; randomize policy order to reduce thermal/order bias.
+    for i, prompt in enumerate(prompts):
+        ids = encode(prompt)
+        outputs, stats = {}, {}
+        names = ['greedy'] + list(policies)
+        rng.shuffle(names)
+        for name in names:
+            out, st = (plain_greedy_generate(model, ids, sc['max_new_tokens']) if name == 'greedy'
+                       else medusa_greedy_generate(model, ids, policies[name], sc['max_new_tokens']))
+            outputs[name], stats[name] = out.cpu(), st
+        if i < sc['warmup_prompts']:
+            continue
+        for name in names:
+            st = stats[name]
+            record = dict(prompt_id=i-sc['warmup_prompts'], method=name,
+                          draft_budget=(0 if name == 'greedy' else len(policies[name].choices)
+                                        if not policies[name].dynamic else B),
+                          agree=exact_agreement(outputs[name], outputs['greedy']),
+                          generated_ids=outputs[name][0, ids.shape[1]:].tolist(), **asdict(st))
+            records.append(record)
+        print(f'Completed measured prompt {i-sc["warmup_prompts"]+1}/{sc["n_prompts"]}', flush=True)
+        out_path(cfg, 'results', f'speed_B{B}_prompts.json').write_text(json.dumps(records, indent=2))
 
-    def encode(p):
-        return tok([vicuna_prompt(p)], return_tensors="pt").input_ids
+    # Synchronization changes runtime; profile overhead in separate runs, never use
+    # those wall times for speedup. Profiling is bounded to the first measured prompt.
+    overhead = {}
+    for name, policy in policies.items():
+        _, st = medusa_greedy_generate(model, encode(prompts[sc['warmup_prompts']]), policy,
+                                      sc['max_new_tokens'], profile_tree=True)
+        overhead[name] = 1000 * st.tree_s / max(st.steps, 1)
+    baseline = [r for r in records if r['method'] == 'greedy']
+    base_tps = sum(r['new_tokens'] for r in baseline) / sum(r['wall_s'] for r in baseline)
+    rows = []
+    for name in ['greedy'] + list(policies):
+        rr = [r for r in records if r['method'] == name]
+        tokens, seconds = sum(r['new_tokens'] for r in rr), sum(r['wall_s'] for r in rr)
+        rows.append(dict(method=name, draft_budget=rr[0]['draft_budget'], tokens_per_s=tokens/seconds,
+                         speedup=(tokens/seconds)/base_tps,
+                         accepted=tokens/sum(r['steps'] for r in rr),
+                         tree_ms_profile=overhead.get(name, 0), agree=np.mean([r['agree'] for r in rr])))
+    print(write_table(rows, out_path(cfg, 'results', f'speed_B{B}.csv')))
+    packages = {p: importlib.metadata.version(p) for p in ['torch','transformers','bitsandbytes','numpy']}
+    metadata = dict(config=cfg, packages=packages, platform=platform.platform(),
+                    gpu=torch.cuda.get_device_name(0), cuda=torch.version.cuda,
+                    prompt_sha256=hashlib.sha256(json.dumps(prompts).encode()).hexdigest(),
+                    timing='Prefill + generation; excludes model load, tokenization, KV allocation and fixed-buffer setup.',
+                    overhead='Separate synchronized run on first measured prompt; includes policy and buffer lookup/build.',
+                    note='Hardware-specific preliminary results. Default tree retains its native budget; inspect draft_budget.')
+    out_path(cfg, 'results', f'speed_B{B}_metadata.json').write_text(json.dumps(metadata, indent=2))
 
-    # greedy reference
-    ref_out, ref_tps = [], []
-    for i, p in enumerate(prompts):
-        out, st = plain_greedy_generate(model, encode(p), sc["max_new_tokens"])
-        if i >= sc["warmup_prompts"]:
-            ref_out.append(out.cpu()), ref_tps.append(st.tokens_per_s)
-    base_tps = float(np.mean(ref_tps))
-    rows = [dict(method="greedy", tokens_per_s=base_tps, speedup=1.0, accepted=1.0,
-                 tree_ms=0.0, agree=1.0)]
-
-    for name, pol in policies.items():
-        tps, acc, tree_ms, agree = [], [], [], []
-        for i, p in enumerate(prompts):
-            out, st = medusa_greedy_generate(model, encode(p), pol, sc["max_new_tokens"])
-            if i < sc["warmup_prompts"]:
-                continue
-            ref = ref_out[i - sc["warmup_prompts"]]
-            n = min(ref.shape[1], out.shape[1])
-            agree.append(float((ref[0, :n] == out[0, :n].cpu()).all()))
-            tps.append(st.tokens_per_s), acc.append(st.mean_accepted)
-            tree_ms.append(1e3 * st.tree_s / max(st.steps, 1))
-        rows.append(dict(method=name, tokens_per_s=float(np.mean(tps)),
-                         speedup=float(np.mean(tps)) / base_tps, accepted=float(np.mean(acc)),
-                         tree_ms=float(np.mean(tree_ms)), agree=float(np.mean(agree))))
-        print(rows[-1])
-        torch.cuda.empty_cache()
-
-    print(write_table(rows, out_path(cfg, "results", f"speed_B{B}.csv")))
-
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
