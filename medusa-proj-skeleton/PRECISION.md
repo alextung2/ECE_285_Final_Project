@@ -1,7 +1,9 @@
 # Precision investigation and handoff
 
-Investigated from main `0bba339b8359e69faa736df6d1d5cc0b27c9e87a` (merged
-tree selection/benchmarking). Original notebook outputs and `validation/alex/`
+Initially investigated main `0bba339b8359e69faa736df6d1d5cc0b27c9e87a` (merged
+tree selection/benchmarking); updated against main
+`54cfc8c00deeb7e42e5357d6c818ef4bb610e929`, which adds Lucia's original FP32 loader
+and precision-test script. Original notebook outputs and `validation/alex/`
 remain historical evidence, not results of this change.
 
 ## Decision
@@ -14,12 +16,15 @@ is agreed and the broader checks pass. Keep FP16 as the default historical
 reproduction mode and an explicitly separate comparison arm. Do not mix its
 traces, fitted scorers, or timing baseline with FP32 artifacts.
 
-The new `nf4_fp32_from_fp16` mode is a precise, independently defined candidate.
-It is **not asserted to reproduce Lucia's missing loader**. If her source reveals
-different promotion, quantization, TF32, or buffer behavior, reconcile that
-difference and rerun the gate before choosing the final mode. The safe outcome
-of a failed gate is to retain the failure and investigate/recollect, not to
-weaken the gate or discard prompts.
+The `nf4_fp32_from_fp16` mode now matches the **promotion operations** in Lucia's
+committed `4bit_weights_fp32_execution` candidate, including its FP32 LM-head
+input hook. CPU regression tests execute her actual patches against controlled
+fixtures and compare parameter/buffer values, dtypes, packed-weight preservation
+and head outputs. This establishes source-level alignment, not real GPU output
+equivalence. Our loader explicitly disables TF32; her script inherits the runtime
+setting. Audit and validate on the target hardware before final collection.
+The safe outcome of a failed gate is to retain the failure and investigate,
+not to weaken the gate or discard prompts.
 
 ## What the evidence establishes
 
@@ -31,20 +36,41 @@ the collector/decoder/model code, and Alex's validation reports were inspected.
 | Notebook cells 8-11 | NF4, double quantization, FP16 compute and nonquantized FP16 heads; five prompts agree; 232 tokens / 93 rounds | Five fixed-tree prompts do not cover dynamic trees |
 | Cells 13-15 | Pilot prompt 24, "What breed dog is smallest?", diverges at token 32; official Medusa reproduces the collector | Establishes this is not only a custom-decoder bug |
 | Cell 15 | Same-prefix cached and uncached logits favor `2` over `1` by 0.015625; official tree logits favor `1` by 0.015625 | Numerical ordering reversal, not an exact tie in this case |
-| Cell 16 | `fp32_lm_head` fails; `4bit_weights_fp32_execution` passes prompt 24 | Candidate source is absent from GitHub |
+| Cell 16 | `fp32_lm_head` fails; `4bit_weights_fp32_execution` passes prompt 24 | Source now available in main 54cfc8c; real-model replay still pending |
 | Cell 17 | Broader candidate pilot: 20/20 exact agreement, 32,806 node rows, 8,950 conditional rows, 680 accepted-prefix rows | Stored notebook evidence, not independently rerun; fixed tree and 64-token horizon only |
 | `validation/alex/official_validation.json` | Five notebook prompts match official tokens and raw/effective acceptance lengths; cached/uncached/static agreement | Historical FP16 run |
 | `dynamic_divergence_B8.json`, `dynamic_divergence_B96.json` | Story prompt at index 50: cached period/anywhere logits 23.03125/23.0; dynamic 23.015625/23.015625 | These two known failures must be in the new gate |
 
-The notebook uploads `test_medusa_precision.py` and later executes
-`load_model_candidate_4bit_weights_fp32_execution.py` from Drive. Neither source
-is embedded in the notebook or present in this checkout. Searches of connected
-Drive for that loader and `ECE285_Medusa` returned no results. Consequently the
-exact tensors, layer compute flags, cast timing, and TF32 settings changed by
-Lucia's candidate **cannot be determined from available evidence**. Its name and
-successful output are not an implementation specification. Her printed 5.03-GiB
-"model loaded" line occurs before the candidate-mode line and cannot be used as
-the post-promotion footprint.
+The notebook originally uploaded `test_medusa_precision.py` and executed
+`load_model_candidate_4bit_weights_fp32_execution.py` from Drive. Both files
+are now committed in main 54cfc8c and preserved unchanged in this PR. They show:
+
+1. Load the backbone as NF4 with double quantization and FP16 computation, with
+   `lm_head` and `medusa_head` excluded from quantization; load floating weights
+   in FP16. The printed 5.03-GiB tensor footprint is measured **before promotion**.
+2. Call `model.lm_head.float()` and install an idempotent forward pre-hook that
+   casts the first LM-head input to FP32. This also makes the isolated head-only
+   experiment valid when hidden states are still FP16.
+3. Skip every `bitsandbytes.nn.Params4bit` parameter; promote all other floating
+   parameters and registered floating buffers to FP32. This includes Medusa
+   heads, embeddings, norms and rotary buffers. Integer buffers remain unchanged.
+4. Set every `Linear4bit.compute_dtype` to FP32 and `compute_type_is_set=True`.
+   There is no backbone dequantization/requantization, no full-FP32 checkpoint
+   reload and no explicit TF32 override in Lucia's script.
+
+Her precision test applies the head-only patch first, then the full patch on the
+same model, clearing KV-cache attributes and allocator caches between trials.
+It checks packed parameter data pointers/dtypes/shapes, compares uncached greedy
+with official Medusa for prompt 24 at 64 tokens, and saves a candidate only when
+exact tokens agree. It does not itself test dynamic trees or multiple prompts;
+that broader fixed-tree evidence comes from notebook cell 17. The test resets
+peak-memory counters per trial, but its peaks include promotion and diagnostic
+forwards; they are not isolated decoding footprints or latency measurements.
+
+The committed source closes the implementation-evidence gap. The original pilot
+`collection_settings.json`, precision-test JSON report and node files were not
+part of this upload. Their hashes and exact run provenance therefore remain
+unverified; do not retroactively attach a new execution contract to those traces.
 
 ## Cause and dtype distinctions
 
@@ -93,9 +119,14 @@ final execution dtype. Conflicting values are rejected.
   and registered floating buffer to FP32 (including embeddings, norms, rotary
   buffers, LM head and Medusa heads); set each Linear4bit computation dtype to
   FP32. Preserve packed parameters and their quantization state. This retains
-  initial FP16 rounding; it is not a fresh full-FP32 checkpoint load.
+  initial FP16 rounding; it is not a fresh full-FP32 checkpoint load. Install the
+  same idempotent FP32 LM-head input hook as Lucia's candidate.
 
-TF32 is explicitly disabled in both arms. There is no autocast wrapper.
+TF32 is explicitly disabled in both arms. Lucia's candidate does not set TF32;
+this is an explicit reproducibility policy, not a verified historical runtime
+setting. There is no autocast wrapper. The execution contract and runtime audit
+now also record `lm_head_fp32_input_hook`; pre-alignment contracts without this
+field are rejected rather than silently treated as equivalent.
 The loader audits actual compute/head/parameter dtypes and packed NF4 state,
 then records the spec, dependency versions, backbone revision, hashes of relevant
 upstream files and actual loaded head tensors. Runtime audit details accompany
@@ -138,7 +169,7 @@ TraceSet.** Changing the file extension cannot fix the semantic gap.
 | root_prob `[N]` | Not stored; a depth-1 parent confidence of 1.0 is a convention, not root probability |
 | gold_rank `[N,H]` | Cannot infer all ranks from a finite fixed tree, rejected prefixes, or truncated continuation |
 | topk_token `[N,H,K]` | Only visited candidates; full lists absent |
-| execution provenance | Historical settings have loader hash but no complete audited dtype contract; source required |
+| execution provenance | Historical settings have loader hash but no complete audited dtype contract; source now committed, but original run settings/hash still needed |
 
 Missing data is unknown, not zero probability, not a negative label, and not rank
 `-1`. A failed prefix censors conditional labels downstream. Also, numerical
@@ -154,7 +185,7 @@ each eligible state with all H x K raw-logit-ranked token IDs and full-vocabular
 probabilities, root probability, H future cached-greedy token IDs/ranks (with
 explicit outside-top-K status), exact prefix and generated position, prompt ID,
 EOS/length eligibility, original tree paths and verification labels. Include
-loader/test source, hashes, checkpoint/software revisions, dtype audit,
+hashes tying the run to the committed loader/test source, checkpoint/software revisions, dtype audit,
 tokenizer/template, dataset revision and train/validation IDs. Validate its
 gold-prefix labels against actual tree verification before writing NPZ; if they
 disagree, a richer node-specific format or recollection is necessary.
@@ -209,7 +240,12 @@ MEDUSA_PRECISION_MODE=nf4_fp32_from_fp16 python collect_medusa_pilot.py --projec
 
 Do not rerun historical notebook cell 17 against the revised collector: it uses
 literal source replacement for the old standalone loader. Keep that notebook
-as evidence; use the explicit command above for new runs.
+as evidence; use the explicit command above for new runs. Likewise,
+`test_medusa_precision.py` is the preserved historical diagnostic: it expects the
+original standalone FP16 `load_model.py` in its `--project-dir` and writes a
+candidate plus report there. Do not use the new shared-loader wrapper as that
+historical input or rerun it over existing evidence. Use a separate copy of the
+original run, or use `09_validate_precision.py` for new shared-loader validation.
 
 Only after correctness passes, use `07_benchmark_budgets.py` with the same mode,
 fresh output directory, agreed prompts and token limits. It uses cached greedy
@@ -225,5 +261,6 @@ CPU environment: Windows, Python 3.13, PyTorch 2.13.0+cpu. CUDA is unavailable;
 `CUDA unavailable: real precision validation NOT RUN`. No GPU correctness,
 FP32 memory/latency, actual pilot conversion, or final research experiment was
 executed here. See `validation/precision_checks.md` for executed regression and
-synthetic integration checks. The missing Drive loader/settings and representative
-GPU gate remain required before certifying the final experimental configuration.
+synthetic integration checks. The loader source is now reconciled; original pilot
+settings/data and the representative GPU gate remain outstanding before certifying
+the final experimental configuration.

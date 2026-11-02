@@ -2,8 +2,8 @@
 
 Read [PRECISION.md](PRECISION.md) before new real-data experiments. The shared
 loader exposes an explicit FP16 historical mode and an FP32 candidate; final
-FP32 correctness remains gated on GPU validation and the missing historical
-loader source. Trace, scorer and benchmark handoffs now carry execution contracts.
+FP32 promotion now matches Lucia's committed source, including the LM-head input
+hook. Real-model correctness still requires GPU validation. Trace, scorer and benchmark handoffs now carry execution contracts.
 
 # Conditional Acceptance Calibration for Dynamic Medusa Decoding
 

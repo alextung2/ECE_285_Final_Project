@@ -70,15 +70,17 @@ def test_promotion_preserves_packed_weights_and_quant_state():
             self.quant_state = object()
             self.compute_dtype = torch.float16
             self.compute_type_is_set = False
-    model = torch.nn.Sequential(Linear4bit(), torch.nn.Linear(2, 2).half())
+    model = torch.nn.Module()
+    model.backbone = Linear4bit()
+    model.lm_head = torch.nn.Linear(2, 2).half()
     model.register_buffer('rotary_cache', torch.ones(2, dtype=torch.float16))
     model.register_buffer('indices', torch.tensor([1, 2]))
-    packed, state = model[0].weight, model[0].quant_state
+    packed, state = model.backbone.weight, model.backbone.quant_state
     promote_execution(model, torch.float32, Linear4bit, Packed)
-    assert model[0].weight is packed and model[0].quant_state is state
+    assert model.backbone.weight is packed and model.backbone.quant_state is state
     assert packed.tolist() == [1, 255] and packed.dtype == torch.uint8
-    assert model[0].compute_dtype == torch.float32 and model[0].compute_type_is_set
-    assert model[1].weight.dtype == model.rotary_cache.dtype == torch.float32
+    assert model.backbone.compute_dtype == torch.float32 and model.backbone.compute_type_is_set
+    assert model.lm_head.weight.dtype == model.rotary_cache.dtype == torch.float32
     assert model.indices.dtype == torch.int64
 
 
@@ -109,10 +111,79 @@ def test_runtime_audit_rejects_fp16_head_in_fp32_mode():
     model.lm_head = torch.nn.Linear(2, 2)
     model.medusa_head = torch.nn.ModuleList([torch.nn.Linear(2, 2)])
     spec = precision_spec(config('nf4_fp32_from_fp16')['model'])
+    with pytest.raises(RuntimeError, match='input hook'):
+        audit_model(model, spec, Linear4bit, Packed)
+    promote_execution(model, torch.float32, Linear4bit, Packed)
     assert audit_model(model, spec, Linear4bit, Packed)['linear4bit_count'] == 1
     model.lm_head.half()
     with pytest.raises(RuntimeError, match='Prediction-head dtype'):
         audit_model(model, spec, Linear4bit, Packed)
+
+
+@pytest.mark.parametrize('source', ['precision_test', 'candidate_loader'])
+def test_promotion_matches_lucia_committed_patches(monkeypatch, source):
+    """Execute her actual promotion code on a CPU fixture, not a rewritten oracle."""
+    import runpy
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+    torch = pytest.importorskip('torch')
+    repo = Path(__file__).resolve().parents[2]
+    if source == 'precision_test':
+        historical = runpy.run_path(str(repo / 'test_medusa_precision.py'))
+        patch = historical['LM_HEAD_PATCH'] + historical['FP32_EXECUTION_PATCH']
+    else:
+        text = (repo / 'load_model_candidate_4bit_weights_fp32_execution.py').read_text()
+        patch = text[text.index('# Compute the backbone output projection in FP32.'):]
+        patch = patch.split('\nprecision_mode =', 1)[0]
+
+    class Packed(torch.nn.Parameter):
+        pass
+    class Linear4bit(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.weight = Packed(torch.tensor([1, 255], dtype=torch.uint8), requires_grad=False)
+            self.quant_state = {'scale': torch.tensor([0.5])}
+            self.compute_dtype = torch.float16
+            self.compute_type_is_set = False
+
+    # Share the floating initialization; make independent packed-weight objects.
+    def model():
+        m = torch.nn.Module()
+        m.backbone = Linear4bit()
+        m.lm_head = torch.nn.Linear(2, 3).half()
+        m.medusa_head = torch.nn.ModuleList([torch.nn.Linear(2, 3).half()])
+        m.register_buffer('rotary_cache', torch.tensor([0.3], dtype=torch.float16))
+        m.register_buffer('indices', torch.tensor([1, 2]))
+        return m
+    reference, actual = model(), model()
+    actual.load_state_dict(reference.state_dict())
+    before = [(m.backbone.weight.data_ptr(), m.backbone.quant_state) for m in (reference, actual)]
+    bnb = SimpleNamespace(nn=SimpleNamespace(Linear4bit=Linear4bit, Params4bit=Packed))
+    monkeypatch.setitem(sys.modules, 'bitsandbytes', bnb)
+    exec(patch, {'model': reference, 'torch': torch, 'bnb': bnb})
+    promote_execution(actual, torch.float32, Linear4bit, Packed)
+    for m, (pointer, state) in zip((reference, actual), before):
+        assert m.backbone.weight.data_ptr() == pointer
+        assert m.backbone.quant_state is state
+        assert m.backbone.compute_dtype == torch.float32
+        assert m.backbone.compute_type_is_set
+    assert reference.state_dict().keys() == actual.state_dict().keys()
+    for name, tensor in reference.state_dict().items():
+        assert tensor.dtype == actual.state_dict()[name].dtype
+        assert torch.equal(tensor, actual.state_dict()[name])
+    half_input = torch.tensor([[0.25, 0.5]], dtype=torch.float16)
+    assert torch.equal(reference.lm_head(half_input), actual.lm_head(half_input))
+    assert actual.lm_head(half_input).dtype == torch.float32
+    promote_execution(actual, torch.float32, Linear4bit, Packed)
+    assert len(actual.lm_head._forward_pre_hooks) == 1  # idempotent, like Lucia's patch
+
+
+def test_pre_alignment_contract_is_not_silently_accepted():
+    ts = real_trace('nf4_fp32_from_fp16')
+    del ts.meta['execution_contract']['lm_head_fp32_input_hook']
+    with pytest.raises(ValueError, match='mismatch'):
+        require_trace_config(ts, config('nf4_fp32_from_fp16'))
 
 
 def test_observer_checks_node_labels_not_only_final_tokens():

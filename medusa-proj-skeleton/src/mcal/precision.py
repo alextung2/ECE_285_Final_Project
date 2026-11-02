@@ -14,6 +14,7 @@ def precision_spec(mcfg):
     return dict(schema_version=1, model=mcfg["name"], precision_mode=mode,
                 weight_storage="nf4", double_quant=True, initial_dtype="float16",
                 compute_dtype=dtype, head_dtype=dtype,
+                lm_head_fp32_input_hook=(dtype == "float32"),
                 promotion="none" if mode == "nf4_fp16" else "floating_parameters_and_buffers",
                 tf32=False, rank_order="raw_logits_topk", probability_dtype="float32",
                 prompt_template="vicuna_v1.1", temperature=0.0)
@@ -23,11 +24,20 @@ def promote_execution(model, dtype, linear4bit, params4bit):
     """Promote floating state without touching packed weights or quantization state.
 
     Deliberately load/quantize in FP16 first, keeping the quantized model identical
-    between arms. This is our defined candidate, NOT a reconstruction of Lucia's
-    unavailable candidate loader. Do not call model.float() on a quantized model.
+    between arms. Matches Lucia's LM_HEAD_PATCH + FP32_EXECUTION_PATCH committed
+    in 54cfc8c, including the LM-head input hook. TF32 policy is set separately
+    by our loader; her historical loader leaves it to the environment.
+    Do not call model.float() on a quantized model.
     """
     import torch
     with torch.no_grad():
+        if dtype == torch.float32:
+            model.lm_head.float()
+            if not getattr(model.lm_head, "_fp32_input_hook_installed", False):
+                def cast_lm_head_input_to_fp32(module, args):
+                    return (args[0].float(),) + args[1:]
+                model.lm_head.register_forward_pre_hook(cast_lm_head_input_to_fp32)
+                model.lm_head._fp32_input_hook_installed = True
         for p in model.parameters():
             if not isinstance(p, params4bit) and p.is_floating_point():
                 p.data = p.data.to(dtype)
@@ -43,6 +53,9 @@ def promote_execution(model, dtype, linear4bit, params4bit):
 def audit_model(model, spec, linear4bit, params4bit):
     import torch
     expected = getattr(torch, spec["compute_dtype"])
+    hook_installed = bool(getattr(model.lm_head, "_fp32_input_hook_installed", False))
+    if hook_installed != spec["lm_head_fp32_input_hook"]:
+        raise RuntimeError("LM-head input hook differs from precision contract")
     layers = [m for m in model.modules() if isinstance(m, linear4bit)]
     if not layers or any(m.compute_dtype != expected for m in layers):
         raise RuntimeError("Missing 4-bit layers or incorrect computation dtype")
@@ -61,6 +74,7 @@ def audit_model(model, spec, linear4bit, params4bit):
     if expected == torch.float32 and any(d != str(torch.float32) for d in buffer_dtypes):
         raise RuntimeError("FP32 execution requires FP32 floating buffers")
     return dict(linear4bit_count=len(layers), compute_dtype=str(expected),
+                lm_head_fp32_input_hook=hook_installed,
                 floating_buffer_dtypes=buffer_dtypes,
                 lm_head_dtype=str(model.lm_head.weight.dtype),
                 medusa_head_dtypes=sorted({str(p.dtype) for p in model.medusa_head.parameters()}))
