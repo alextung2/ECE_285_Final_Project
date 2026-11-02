@@ -26,9 +26,14 @@ def main():
     calib = TraceSet.load(out_path(cfg, cfg["traces"]["calib"]["file"]))
     fit, _ = calib.split_by_prompt(cfg["estimators"]["val_frac"], seed=cfg["seed"])
     ev = TraceSet.load(out_path(cfg, cfg["traces"]["eval"]["file"]))
+    from mcal.precision import require_trace_config, require_compatible
+    contract = require_trace_config(calib, cfg, args.synthetic)
+    require_compatible(contract, require_trace_config(ev, cfg, args.synthetic))
     S = {n: Scorer.load(out_path(cfg, "models", f"{n}.pkl"))
          for n in ["medusa_acc", "medusa_plus", "count_cond", "logistic_cond", "direct"]}
 
+    for scorer in S.values():
+        require_compatible(contract, getattr(scorer, "execution_contract", None))
     rng = np.random.default_rng(cfg["seed"])
     n_eval = cfg["compare"].get("eval_steps")
     steps = np.sort(rng.choice(ev.n_steps, n_eval, replace=False)) if n_eval and n_eval < ev.n_steps \
@@ -48,7 +53,11 @@ def main():
             if kind == "fixed":
                 handoff = out_path(cfg, "models", f"fixed_tree_{name}_B{B}.json")
                 if handoff.exists():
-                    choices = validate_choices(json.loads(handoff.read_text()), fit.n_heads, fit.topk)
+                    payload = json.loads(handoff.read_text())
+                    if not isinstance(payload, dict):
+                        raise ValueError(f"Legacy tree lacks execution contract: {handoff}")
+                    require_compatible(contract, payload.get("execution_contract"))
+                    choices = validate_choices(payload["choices"], fit.n_heads, fit.topk)
                     if len(choices) != B:
                         raise ValueError(f"Wrong budget in {handoff}")
                     scores, ft = {(): 1.0}, []

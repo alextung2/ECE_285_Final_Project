@@ -1,3 +1,10 @@
+## Precision and interoperability
+
+Read [PRECISION.md](PRECISION.md) before new real-data experiments. The shared
+loader exposes an explicit FP16 historical mode and an FP32 candidate; final
+FP32 correctness remains gated on GPU validation and the missing historical
+loader source. Trace, scorer and benchmark handoffs now carry execution contracts.
+
 # Conditional Acceptance Calibration for Dynamic Medusa Decoding
 
 ECE 285 project skeleton (Ada Qi, Alexander Tung, Zhuoting Yang).

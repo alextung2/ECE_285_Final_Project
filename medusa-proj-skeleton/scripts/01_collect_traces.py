@@ -6,6 +6,9 @@
 """
 
 import time
+import hashlib
+import json
+from pathlib import Path
 
 import numpy as np
 from _common import parse
@@ -39,16 +42,31 @@ def main():
 
     model, tok = load_medusa(cfg)
     for split in splits:
-        prompts = load_prompts(tcfg[split])
+        if tcfg[split].get("prompt_file"):
+            prompt_records = json.loads(Path(tcfg[split]["prompt_file"]).read_text(encoding="utf-8"))
+            prompts = [r["instruction"] for r in prompt_records]
+            prompt_ids = [r["prompt_id"] for r in prompt_records]
+        else:
+            prompts = load_prompts(tcfg[split])
+            prompt_ids = list(range(len(prompts)))
         parts, agree, t0 = [], [], time.time()
         dest = out_path(cfg, tcfg[split]["file"])
+        if dest.exists():
+            raise FileExistsError(f"Preserve previous traces; choose a new out_dir: {dest}")
         for i, p in enumerate(prompts):
             try:
-                ts, a = traces_for_prompt(model, tok, p, i, tcfg["topk"], tcfg["max_new_tokens"],
+                ts, a = traces_for_prompt(model, tok, p, prompt_ids[i], tcfg["topk"], tcfg["max_new_tokens"],
                                           tcfg.get("keep_tokens", False))
             except ValueError as e:
                 print(f"skip prompt {i}: {e}")
                 continue
+            except RuntimeError as e:
+                failure = dict(prompt_id=prompt_ids[i], prompt=p, error=str(e),
+                               execution_contract=model.execution_contract, collection_complete=False)
+                dest.with_suffix('.failure.json').write_text(json.dumps(failure, indent=2))
+                raise
+            ts.meta.update(split=split, dataset=tcfg[split]["dataset"],
+                           prompt_sha256=hashlib.sha256(json.dumps(list(zip(prompt_ids, prompts))).encode()).hexdigest())
             parts.append(ts), agree.append(a)
             if (i + 1) % 20 == 0:
                 print(f"[{split}] {i + 1}/{len(prompts)}  {time.time() - t0:.0f}s  "
@@ -60,8 +78,6 @@ def main():
                        greedy_agreement=float(np.mean(agree)))
         ts.save(dest)
         print(split, ts.summary())
-        if np.mean(agree) < 0.995:
-            print("WARNING: teacher-forced argmax disagrees with generated tokens; labels may be off.")
 
 
 if __name__ == "__main__":

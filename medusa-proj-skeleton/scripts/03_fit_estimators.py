@@ -29,6 +29,9 @@ def main():
     ecfg = cfg["estimators"]
     calib = TraceSet.load(out_path(cfg, cfg["traces"]["calib"]["file"]))
     evals = TraceSet.load(out_path(cfg, cfg["traces"]["eval"]["file"]))
+    from mcal.precision import require_trace_config, require_compatible
+    contract = require_trace_config(calib, cfg, args.synthetic)
+    require_compatible(contract, require_trace_config(evals, cfg, args.synthetic))
     fit, held = calib.split_by_prompt(ecfg["val_frac"], seed=cfg["seed"])
     print(f"fit: {fit.n_steps} steps | held-out calib: {held.n_steps} | eval: {evals.n_steps}")
 
@@ -45,6 +48,7 @@ def main():
         DirectClassifier(**ecfg["direct"]).fit(fit, pool=pool_fit),
     ]
     for s in scorers:
+        s.execution_contract = contract
         s.save(out_path(cfg, "models", f"{s.name}.pkl"))
 
     # fixed trees (static scorers only), in medusa_choices format for online decoding
@@ -52,7 +56,7 @@ def main():
         if not s.dynamic:
             for B in cfg["compare"]["budgets"]:
                 ch = tree_to_medusa_choices(fixed_tree(s, fit, B))
-                out_path(cfg, "models", f"fixed_tree_{s.name}_B{B}.json").write_text(json.dumps(ch))
+                out_path(cfg, "models", f"fixed_tree_{s.name}_B{B}.json").write_text(json.dumps(dict(choices=ch, execution_contract=contract)))
 
     # calibration on shared pools
     rows, curves = [], {}

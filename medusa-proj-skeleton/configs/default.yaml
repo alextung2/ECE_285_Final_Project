@@ -5,9 +5,10 @@ out_dir: outputs
 
 model:
   name: FasterDecoding/medusa-vicuna-7b-v1.3   # public Medusa-1 checkpoint, all weights frozen
-  dtype: float16
+  precision_mode: nf4_fp16  # historical default; FP32 candidate requires GPU validation
+  dtype: float16  # initial quantization dtype for BOTH modes
   device_map: auto
-  load_in_4bit: true       # work-plan NF4 backbone; prediction heads remain fp16
+  load_in_4bit: true       # NF4 storage; execution/head dtype selected by precision_mode
 
 traces:
   topk: 10                 # must equal medusa.model.utils.TOPK

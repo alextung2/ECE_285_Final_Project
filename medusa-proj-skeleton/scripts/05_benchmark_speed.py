@@ -34,6 +34,12 @@ def main(model_and_tokenizer=None):
     methods = sc.get('methods', ['medusa_default', 'medusa_plus'])
     if sc['n_prompts'] < 1 or sc['warmup_prompts'] < 1 or sc['max_new_tokens'] < 1:
         raise ValueError('Use at least one warmup, measured prompt, and generated token.')
+    from mcal.precision import require_compatible, precision_spec
+    model, tok = model_and_tokenizer or load_medusa(cfg)
+    expected = precision_spec(cfg["model"])
+    if any(model.execution_contract.get(k) != v for k, v in expected.items()):
+        raise ValueError("Reused model differs from requested precision")
+    contract = dict(model.execution_contract, n_heads=model.medusa, topk=cfg['traces']['topk'])
     policies = {}
     for name in methods:
         if name == 'medusa_default':
@@ -42,11 +48,17 @@ def main(model_and_tokenizer=None):
             policies[name] = DynamicTree(MedusaPlusProb(), B)
         elif name in ('medusa_acc', 'count_cond'):
             path = out_path(cfg, 'models', f'fixed_tree_{name}_B{B}.json')
-            policies[name] = StaticTree(json.loads(path.read_text()))
+            payload = json.loads(path.read_text())
+            if not isinstance(payload, dict):
+                raise ValueError(f"Legacy tree lacks execution contract: {path}")
+            require_compatible(contract, payload.get('execution_contract'))
+            policies[name] = StaticTree(payload['choices'])
             if len(policies[name].choices) != B:
                 raise ValueError(f'{path} does not contain {B} draft nodes')
         elif name in ('direct', 'logistic_cond'):
-            policies[name] = DynamicTree(Scorer.load(out_path(cfg, 'models', f'{name}.pkl')), B)
+            scorer = Scorer.load(out_path(cfg, 'models', f'{name}.pkl'))
+            require_compatible(contract, getattr(scorer, 'execution_contract', None))
+            policies[name] = DynamicTree(scorer, B)
         else:
             raise ValueError(f'Unknown policy: {name}')
 
@@ -61,7 +73,6 @@ def main(model_and_tokenizer=None):
     if len(prompts) < needed:
         raise ValueError(f'Need {needed} prompts, found {len(prompts)}')
     prompts = prompts[:needed]
-    model, tok = model_and_tokenizer or load_medusa(cfg)
     encode = lambda p: tok([vicuna_prompt(p)], return_tensors='pt').input_ids
     records = []
     rng = np.random.default_rng(cfg['seed'])
@@ -79,7 +90,7 @@ def main(model_and_tokenizer=None):
             continue
         for name in names:
             st = stats[name]
-            record = dict(prompt_id=i-sc['warmup_prompts'], method=name,
+            record = dict(precision_mode=expected["precision_mode"], prompt_id=i-sc['warmup_prompts'], method=name,
                           draft_budget=(0 if name == 'greedy' else len(policies[name].choices)
                                         if not policies[name].dynamic else B),
                           agree=exact_agreement(outputs[name], outputs['greedy']),
@@ -101,13 +112,13 @@ def main(model_and_tokenizer=None):
     for name in ['greedy'] + list(policies):
         rr = [r for r in records if r['method'] == name]
         tokens, seconds = sum(r['new_tokens'] for r in rr), sum(r['wall_s'] for r in rr)
-        rows.append(dict(method=name, draft_budget=rr[0]['draft_budget'], tokens_per_s=tokens/seconds,
+        rows.append(dict(precision_mode=expected["precision_mode"], method=name, draft_budget=rr[0]['draft_budget'], tokens_per_s=tokens/seconds,
                          speedup=(tokens/seconds)/base_tps,
                          accepted=tokens/sum(r['steps'] for r in rr),
                          tree_ms_profile=overhead.get(name, 0), agree=np.mean([r['agree'] for r in rr])))
     print(write_table(rows, out_path(cfg, 'results', f'speed_B{B}.csv')))
     packages = {p: importlib.metadata.version(p) for p in ['torch','transformers','bitsandbytes','numpy']}
-    metadata = dict(config=cfg, packages=packages, platform=platform.platform(),
+    metadata = dict(execution_contract=model.execution_contract, precision_audit=model.precision_audit, config=cfg, packages=packages, platform=platform.platform(),
                     gpu=torch.cuda.get_device_name(0), cuda=torch.version.cuda,
                     prompt_sha256=hashlib.sha256(json.dumps(prompts).encode()).hexdigest(),
                     timing='Prefill + generation; excludes model load, tokenization, KV allocation and fixed-buffer setup.',

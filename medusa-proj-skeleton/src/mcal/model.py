@@ -21,12 +21,26 @@ from __future__ import annotations
 
 def load_medusa(cfg: dict):
     import torch
+    from pathlib import Path
     import zipfile
     from unittest.mock import patch
     import transformers.modeling_utils as modeling_utils
     from medusa.model.medusa_model import MedusaModel
 
+    from .precision import precision_spec, promote_execution, audit_model
+    import hashlib
+    import importlib.metadata
+    import inspect
+    import medusa.model.medusa_model as upstream
+    from bitsandbytes.nn import Linear4bit, Params4bit
     mcfg = cfg["model"]
+    spec = precision_spec(mcfg)
+    from medusa.model.utils import TOPK
+    if cfg.get("traces", {}).get("topk", TOPK) != TOPK:
+        raise ValueError(f"traces.topk must equal upstream candidate TOPK={TOPK}")
+    # Keep FP32 matmuls FP32 on Ampere as well as T4; record this policy.
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32 = False
     kwargs = dict(torch_dtype=getattr(torch, mcfg.get("dtype", "float16")),
                   low_cpu_mem_usage=True, device_map=mcfg.get("device_map", "auto"))
     if mcfg.get("load_in_4bit", False):
@@ -45,11 +59,23 @@ def load_medusa(cfg: dict):
         return original_load(checkpoint_file)
     with patch.object(modeling_utils, 'load_state_dict', load_mapped):
         model = MedusaModel.from_pretrained(mcfg["name"], **kwargs)
-    if mcfg.get("load_in_4bit", False):
-        if model.lm_head.weight.dtype != torch.float16 or any(
-            p.dtype != torch.float16 for p in model.medusa_head.parameters()
-        ):
-            raise RuntimeError("Work-plan settings require fp16 lm_head and Medusa heads")
+    if spec["precision_mode"] == "nf4_fp32_from_fp16":
+        promote_execution(model, torch.float32, Linear4bit, Params4bit)
+    model.precision_audit = audit_model(model, spec, Linear4bit, Params4bit)
+    # Hash the actual loaded heads (including the initial FP16 rounding). The
+    # upstream v0.1 loader resolves head and backbone checkpoints independently.
+    heads_hash = hashlib.sha256()
+    for name, tensor in model.medusa_head.state_dict().items():
+        heads_hash.update(name.encode())
+        heads_hash.update(memoryview(tensor.detach().cpu().contiguous().numpy()).cast('B'))
+    source_dir = Path(inspect.getfile(upstream)).parent
+    model.execution_contract = dict(spec,
+        packages={p: importlib.metadata.version(p) for p in
+                  ["torch", "transformers", "bitsandbytes", "accelerate"]},
+        medusa_source_sha256={name: hashlib.sha256((source_dir / name).read_bytes()).hexdigest()
+                              for name in ['medusa_model.py', 'utils.py', 'kv_cache.py', 'modeling_llama_kv.py']},
+        loaded_heads_sha256=heads_hash.hexdigest(),
+        base_revision=getattr(model.config, "_commit_hash", None))
     model.eval()
     for p in model.parameters():       # backbone AND heads stay frozen
         p.requires_grad_(False)

@@ -17,11 +17,11 @@ So a step is fully described by `gold_rank` (labels) plus the head
 probabilities (features). Because only one path can match, the number of
 accepted draft tokens for a tree T is simply |{v in T : S_v = 1}|.
 
-Why offline traces are valid: Medusa heads read only the hidden state of the
-last accepted token, so running ordinary greedy generation and applying the
-heads at *every* position gives exactly the drafts Medusa would see at that
-position. (Positions visited during real Medusa decoding are a subset; check
-that this doesn't bias results by comparing against online runs in Week 6.)
+Offline validity requires numerically consistent hidden states, candidate ranks
+and verification decisions across causal and tree forwards. This is an
+assumption to validate, not guaranteed under FP16 or FP32. Collection checks
+visited static rounds; the separate precision gate checks dynamic budgets too.
+Positions visited online are a subset, so also assess visitation bias.
 """
 
 from __future__ import annotations
@@ -111,6 +111,10 @@ class TraceSet:
 
     @classmethod
     def load(cls, path: str | Path) -> "TraceSet":
+        if Path(path).suffix.lower() == '.json':
+            raise ValueError("Pilot node JSON is not a TraceSet: missing full top-K probabilities, "
+                             "root confidence and complete gold ranks. Recollect/export .npz; "
+                             "do not infer missing labels from rejected prefixes.")
         z = np.load(path, allow_pickle=False)
         return cls(
             gold_rank=z["gold_rank"], topk_prob=z["topk_prob"], root_prob=z["root_prob"],
@@ -121,6 +125,11 @@ class TraceSet:
 
     @classmethod
     def concat(cls, parts: list["TraceSet"]) -> "TraceSet":
+        from .precision import require_compatible, trace_contract
+        if not parts:
+            raise ValueError("No traces collected")
+        for part in parts[1:]:
+            require_compatible(trace_contract(parts[0]), trace_contract(part))
         cat = lambda name: np.concatenate([getattr(p, name) for p in parts])
         tok = None if any(p.topk_token is None for p in parts) else cat("topk_token")
         return cls(cat("gold_rank"), cat("topk_prob"), cat("root_prob"),
