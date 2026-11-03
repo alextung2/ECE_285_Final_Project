@@ -53,10 +53,9 @@ class DynamicTree:
 
     def __call__(self, medusa_logits_last, logits_last):
         import torch
-        hp = torch.softmax(medusa_logits_last.float(), -1)            # [H, V]
-        # Match upstream candidate rank ordering, including ties in fp16 logits.
-        ranks = medusa_logits_last.topk(self.topk, -1).indices
-        top_p = hp.gather(-1, ranks).cpu().numpy()[None]     # [1, H, K]
+        from .precision import ranked_probabilities
+        probs, ranks = ranked_probabilities(medusa_logits_last, self.topk)
+        top_p = probs.cpu().numpy()[None]     # [1, H, K]
         root = torch.softmax(logits_last.float(), -1).max().item()
         H = top_p.shape[1]
         ts = TraceSet(gold_rank=np.zeros((1, H), np.int16), topk_prob=top_p.astype(np.float32),
@@ -88,14 +87,15 @@ class DecodeStats:
 
 
 def medusa_greedy_generate(model, input_ids, policy, max_new_tokens: int = 256,
-                           profile_tree: bool = False, max_steps: int | None = None):
+                           profile_tree: bool = False, max_steps: int | None = None,
+                           observer=None):
     import torch
     with torch.inference_mode():
         return _medusa_greedy_generate(model, input_ids, policy, max_new_tokens,
-                                       profile_tree, max_steps)
+                                       profile_tree, max_steps, observer)
 
 
-def _medusa_greedy_generate(model, input_ids, policy, max_new_tokens, profile_tree, max_steps):
+def _medusa_greedy_generate(model, input_ids, policy, max_new_tokens, profile_tree, max_steps, observer=None):
     """Returns (output_ids [1, L], DecodeStats). Greedy verification only."""
     import torch
     from medusa.model.kv_cache import initialize_past_key_values
@@ -147,9 +147,14 @@ def _medusa_greedy_generate(model, input_ids, policy, max_new_tokens, profile_tr
 
         candidates, tree_candidates = generate_candidates(
             medusa_logits, logits, bufs["tree_indices"], bufs["retrieve_indices"], temperature=0.0)
+        if observer is not None:
+            head_before = medusa_logits[:, 0, -1].detach().clone()
         medusa_logits, logits, outputs = tree_decoding(
             model, tree_candidates, pkv, bufs["medusa_position_ids"], input_ids, bufs["retrieve_indices"])
         best, acc_len = evaluate_posterior(logits, candidates, 0.0)
+        if observer is not None:
+            # Correctness instrumentation only; never use these timings as latency.
+            observer(input_ids, choices, bufs, candidates, logits, head_before)
         stats.raw_accept_lengths.append(int(acc_len) + 1)
         # Enforce the same token and first-EOS boundaries as ordinary greedy.
         count = min(int(acc_len) + 1, max_new_tokens - int(new_token))

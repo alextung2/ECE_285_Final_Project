@@ -2,7 +2,7 @@
 """Collect node-level Medusa calibration traces using the saved Colab loader.
 
 Run with the project's Python 3.11 interpreter:
-    python collect_medusa_pilot.py --project-dir PATH --num-prompts 1
+    python collect_medusa_pilot.py --project-dir PATH --output-dir NEW_PATH --num-prompts 1
 
 Features are obtained before verification. Labels are computed after verification.
 The root is a backbone greedy prediction and is excluded from node-level rows.
@@ -103,9 +103,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--project-dir", type=Path, required=True)
     parser.add_argument("--num-prompts", type=int, default=1)
+    parser.add_argument("--loader", type=Path, help="Shared checkout load_model.py (required for explicit modes)")
+    parser.add_argument("--output-dir", type=Path, required=True, help="New directory; never overwrite pilot v1/v2")
     args = parser.parse_args()
     project = args.project_dir
-    loader = project / "load_model.py"
+    loader = args.loader or project / "load_model.py"
     prompt_file = project / "pilot_prompts.json"
     prompts = json.loads(prompt_file.read_text(encoding="utf-8"))
     if not 1 <= args.num_prompts <= len(prompts):
@@ -118,6 +120,8 @@ def main():
     model = loaded["model"]
     model.requires_grad_(False)
     model_id = loaded["model_id"]
+    if not getattr(model, "execution_contract", None):
+        raise RuntimeError("Loader lacks audited execution_contract; use checkout load_model.py")
 
     import torch
     import medusa.model.medusa_model as medusa_module
@@ -142,7 +146,9 @@ def main():
     ).stdout.strip()
 
     settings = {
-        "schema_version": 1,
+        "schema_version": 2,
+        "execution_contract": model.execution_contract,
+        "precision_audit": model.precision_audit,
         "collector_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "loader_sha256": hashlib.sha256(loader.read_bytes()).hexdigest(),
         "pilot_prompts_sha256": hashlib.sha256(prompt_file.read_bytes()).hexdigest(),
@@ -157,7 +163,7 @@ def main():
         "ranks_in_records": "one-based; parent_rank=0 denotes the backbone root",
         "timing_benchmark": False,
     }
-    output_dir = project / "pilot_node_traces_v1"
+    output_dir = args.output_dir
     output_dir.mkdir(parents=True, exist_ok=True)
     settings_path = output_dir / "collection_settings.json"
     if settings_path.exists():

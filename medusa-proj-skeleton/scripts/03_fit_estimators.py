@@ -29,7 +29,15 @@ def main():
     ecfg = cfg["estimators"]
     calib = TraceSet.load(out_path(cfg, cfg["traces"]["calib"]["file"]))
     evals = TraceSet.load(out_path(cfg, cfg["traces"]["eval"]["file"]))
-    fit, held = calib.split_by_prompt(ecfg["val_frac"], seed=cfg["seed"])
+    from mcal.precision import require_trace_config, require_compatible
+    contract = require_trace_config(calib, cfg, args.synthetic)
+    require_compatible(contract, require_trace_config(evals, cfg, args.synthetic))
+    from mcal.audit import audit_file, audit_pair
+    from mcal.handoff import split_calibration
+    audit_file(out_path(cfg, cfg["traces"]["calib"]["file"]), cfg, args.synthetic)
+    audit_file(out_path(cfg, cfg["traces"]["eval"]["file"]), cfg, args.synthetic)
+    audit_pair(calib, evals)
+    fit, held = split_calibration(calib, ecfg.get("manifest"), ecfg["val_frac"], cfg["seed"])
     print(f"fit: {fit.n_steps} steps | held-out calib: {held.n_steps} | eval: {evals.n_steps}")
 
     ref = MedusaPlusProb()
@@ -44,15 +52,30 @@ def main():
         LogisticConditional(**ecfg["logistic_cond"]).fit(fit),
         DirectClassifier(**ecfg["direct"]).fit(fit, pool=pool_fit),
     ]
+    if ecfg["pool"].get("self_retrain", False):
+        union = candidate_pool_nodes(fit, [ref, scorers[-1]], pc["budget"], pc["n_steps"], seed=cfg["seed"])
+        scorers[-1] = DirectClassifier(**ecfg["direct"]).fit(fit, pool=union)
     for s in scorers:
+        s.execution_contract = contract
         s.save(out_path(cfg, "models", f"{s.name}.pkl"))
+
+    from mcal.features import FEATURE_SCHEMA
+    from pathlib import Path
+    import hashlib
+    manifest = ecfg.get("manifest")
+    provenance = dict(execution_contract=contract, feature_schema=FEATURE_SCHEMA,
+                      source="synthetic" if args.synthetic else "real_traces", config=cfg,
+                      fit_prompt_ids=np.unique(fit.prompt_id).tolist(),
+                      validation_prompt_ids=np.unique(held.prompt_id).tolist(),
+                      manifest_sha256=hashlib.sha256(Path(manifest).read_bytes()).hexdigest() if manifest else None)
+    out_path(cfg, "models", "training_metadata.json").write_text(json.dumps(provenance, indent=2))
 
     # fixed trees (static scorers only), in medusa_choices format for online decoding
     for s in scorers:
         if not s.dynamic:
             for B in cfg["compare"]["budgets"]:
                 ch = tree_to_medusa_choices(fixed_tree(s, fit, B))
-                out_path(cfg, "models", f"fixed_tree_{s.name}_B{B}.json").write_text(json.dumps(ch))
+                out_path(cfg, "models", f"fixed_tree_{s.name}_B{B}.json").write_text(json.dumps(dict(choices=ch, execution_contract=contract)))
 
     # calibration on shared pools
     rows, curves = [], {}

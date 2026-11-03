@@ -1,3 +1,15 @@
+## Precision and interoperability
+
+Ada's code is reconciled in the canonical package. Use
+[the integrated calibration notebook](../Step%202%20Calibration%20Integrated.ipynb)
+and read [ADA_HANDOFF.md](ADA_HANDOFF.md) for CPU tests, model compatibility,
+real-data manifests and the later GPU workflow. Original uploads remain evidence.
+
+Read [PRECISION.md](PRECISION.md) before new real-data experiments. The shared
+loader exposes an explicit FP16 historical mode and an FP32 candidate; final
+FP32 promotion now matches Lucia's committed source, including the LM-head input
+hook. Real-model correctness still requires GPU validation. Trace, scorer and benchmark handoffs now carry execution contracts.
+
 # Conditional Acceptance Calibration for Dynamic Medusa Decoding
 
 ECE 285 project skeleton (Ada Qi, Alexander Tung, Zhuoting Yang).

@@ -34,7 +34,7 @@ def main():
     if saved.keys() != actual_heads.keys():
         raise RuntimeError('Trained Medusa head keys do not match')
     for name, parameter in actual_heads.items():
-        if not torch.equal(parameter, saved[name].to(device=parameter.device, dtype=parameter.dtype)):
+        if not torch.equal(parameter, saved[name].half().to(device=parameter.device, dtype=parameter.dtype)):
             raise RuntimeError(f'Trained Medusa head mismatch: {name}')
     del saved, actual_heads
     print('Trained Medusa head weights verified.', flush=True)
@@ -89,12 +89,14 @@ def main():
                    cached_matches_uncached=cached_tokens == uncached_tokens,
                    medusa_matches_cached=actual == cached_tokens,
                    medusa_matches_uncached=actual == uncached_tokens)
+        row["execution_contract"] = model.execution_contract
         rows.append(row)
         if len(saved_lengths) == len(PROMPTS):
             row['matches_saved_notebook_acceptance'] = stats.accept_lengths == saved_lengths[len(rows)-1]
         print(row, flush=True)
     out_path(cfg, 'results', 'official_validation.json').write_text(json.dumps(rows, indent=2))
-    if not all(r['tokens_match'] and r['acceptance_match'] and r['raw_acceptance_match'] for r in rows):
+    if not all(r['tokens_match'] and r['acceptance_match'] and r['raw_acceptance_match']
+               and r['cached_matches_uncached'] and r['medusa_matches_cached'] for r in rows):
         raise SystemExit('Official equivalence failed; inspect official_validation.json')
     print('PASS: official tokens and acceptance lengths match on all five notebook prompts.')
 

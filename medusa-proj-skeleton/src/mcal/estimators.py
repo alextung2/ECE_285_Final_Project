@@ -30,7 +30,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .features import NodeBatch, conditional_nodes, node_features
+from .features import NodeBatch, conditional_nodes, node_features, FEATURE_SCHEMA
 from .traces import TraceSet
 
 
@@ -59,7 +59,12 @@ class Scorer:
             score[m] *= self.factor(traces, pref)
         return score
 
+    def validate_feature_schema(self):
+        if hasattr(self, "model") and getattr(self, "feature_schema", None) != FEATURE_SCHEMA:
+            raise ValueError("Missing/incompatible feature schema; refit with canonical mcal code")
+
     def save(self, path: str | Path) -> None:
+        self.validate_feature_schema()
         Path(path).parent.mkdir(parents=True, exist_ok=True)
         with open(path, "wb") as f:
             pickle.dump(self, f)
@@ -67,7 +72,9 @@ class Scorer:
     @staticmethod
     def load(path: str | Path) -> "Scorer":
         with open(path, "rb") as f:
-            return pickle.load(f)
+            scorer = pickle.load(f)
+        scorer.validate_feature_schema()
+        return scorer
 
 
 def _truncate(path: np.ndarray, d: int) -> np.ndarray:
@@ -127,9 +134,9 @@ class CountConditional(Scorer):
     def __init__(self, alpha: float = 20.0):
         self.alpha = alpha
 
-    def fit(self, traces, **kw):
+    def fit(self, traces, nodes=None, **kw):
         H, K = traces.n_heads, traces.topk
-        nb, y = conditional_nodes(traces)
+        nb, y = conditional_nodes(traces) if nodes is None else nodes
         pr = np.where(nb.depth > 1, nb.parent_rank, K)
         d0, r = nb.depth - 1, nb.own_rank
         hits = np.zeros((H, K + 1, K))
@@ -172,16 +179,22 @@ class LogisticConditional(Scorer):
     """Logistic regression for q_v(x) = P(S_v | S_u = 1, x), trained on accepted-parent nodes."""
     name, dynamic = "logistic_cond", True
 
-    def __init__(self, C: float = 1.0, rank_cap: int = 4):
-        self.C, self.rank_cap = C, rank_cap
+    def __init__(self, C: float = 1.0, rank_cap: int = 4, drop: tuple = ()):
+        self.C, self.rank_cap, self.drop = C, rank_cap, tuple(drop)
 
-    def fit(self, traces, **kw):
-        nb, y = conditional_nodes(traces)
-        self.model = _Logistic(self.C).fit(node_features(traces, nb, self.rank_cap), y)
+    def _X(self, traces, nodes):
+        self.validate_feature_schema()
+        return node_features(traces, nodes, self.rank_cap, getattr(self, "drop", ()))
+
+    def fit(self, traces, nodes=None, **kw):
+        """nodes: optional precomputed conditional_nodes(traces) to save time in sweeps."""
+        nb, y = conditional_nodes(traces) if nodes is None else nodes
+        self.feature_schema = FEATURE_SCHEMA
+        self.model = _Logistic(self.C).fit(self._X(traces, nb), y)
         return self
 
     def factor(self, traces, nodes):
-        return self.model.predict_proba(node_features(traces, nodes, self.rank_cap))
+        return self.model.predict_proba(self._X(traces, nodes))
 
 
 class DirectClassifier(Scorer):
@@ -195,18 +208,23 @@ class DirectClassifier(Scorer):
     """
     name, dynamic = "direct", True
 
-    def __init__(self, C: float = 1.0, rank_cap: int = 4, monotone: bool = True):
-        self.C, self.rank_cap, self.monotone = C, rank_cap, monotone
+    def __init__(self, C: float = 1.0, rank_cap: int = 4, monotone: bool = True, drop: tuple = ()):
+        self.C, self.rank_cap, self.monotone, self.drop = C, rank_cap, monotone, tuple(drop)
 
     def fit(self, traces, pool: tuple[NodeBatch, np.ndarray] | None = None, **kw):
         if pool is None:
             raise ValueError("DirectClassifier needs a candidate pool: see features.candidate_pool_nodes")
         nb, y = pool
-        self.model = _Logistic(self.C).fit(node_features(traces, nb, self.rank_cap), y)
+        self.feature_schema = FEATURE_SCHEMA
+        self.model = _Logistic(self.C).fit(self._X(traces, nb), y)
         return self
 
+    def _X(self, traces, nodes):
+        self.validate_feature_schema()
+        return node_features(traces, nodes, self.rank_cap, getattr(self, "drop", ()))
+
     def _raw(self, traces, nodes):
-        return self.model.predict_proba(node_features(traces, nodes, self.rank_cap))
+        return self.model.predict_proba(self._X(traces, nodes))
 
     def child_scores(self, traces, step, parent_path, parent_score):
         s = self._raw(traces, _children(traces, step, parent_path))
