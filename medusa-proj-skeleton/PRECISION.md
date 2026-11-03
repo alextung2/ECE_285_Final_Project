@@ -1,5 +1,21 @@
 # Precision investigation and handoff
 
+## Current data status before merge (2026-11-02)
+
+Main at 66d6232 now includes all 20 FP32 pilot node JSON files (32,806
+nodes, 20 recorded exact-output agreements), the prompt-24 precision report,
+and the original FP16 shared pilot NPZ. Earlier missing-upload notes below
+describe the state when those checks were performed.
+
+The FP16 NPZ has 498 complete rounds from 20 prompts; all six arrays reproduce
+exactly from the recorded JSON. Default-tree acceptance replay agrees on all
+547 recorded rounds, but prompt 24 differs from uncached greedy at token 32.
+The FP32 node JSON still lacks complete TraceSet arrays. Full compatible FP32
+training/validation/evaluation NPZ collection and representative dynamic-policy
+GPU validation remain pending. Merging this CPU-tested code does not certify
+GPU correctness or complete the research experiments.
+
+
 Initially investigated main `0bba339b8359e69faa736df6d1d5cc0b27c9e87a` (merged
 tree selection/benchmarking); updated against main
 `54cfc8c00deeb7e42e5357d6c818ef4bb610e929`, which adds Lucia's original FP32 loader

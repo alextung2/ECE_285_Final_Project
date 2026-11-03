@@ -1,0 +1,9 @@
+{
+  "completed_prompts": 20,
+  "skipped_prompts": 0,
+  "mismatched_prompts": 0,
+  "candidate_node_records": 32806,
+  "conditional_training_records": 8950,
+  "accepted_prefix_records": 680,
+  "failed_prefix_records": 32126
+}
