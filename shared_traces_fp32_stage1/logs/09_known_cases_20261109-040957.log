@@ -1,0 +1,30 @@
+$ /content/medusa-env/bin/python -u scripts/09_validate_precision.py --set model.precision_mode=nf4_fp32_from_fp16 speed.max_new_tokens=64 out_dir=/content/drive/MyDrive/ECE285_Medusa/fp32_v1/stage1/known_cases
+/content/medusa-env/lib/python3.11/site-packages/transformers/utils/generic.py:441: UserWarning: torch.utils._pytree._register_pytree_node is deprecated. Please use torch.utils._pytree.register_pytree_node instead.
+  _torch_pytree._register_pytree_node(
+/content/medusa-env/lib/python3.11/site-packages/transformers/utils/generic.py:309: UserWarning: torch.utils._pytree._register_pytree_node is deprecated. Please use torch.utils._pytree.register_pytree_node instead.
+  _torch_pytree._register_pytree_node(
+/content/medusa-env/lib/python3.11/site-packages/transformers/utils/generic.py:309: UserWarning: torch.utils._pytree._register_pytree_node is deprecated. Please use torch.utils._pytree.register_pytree_node instead.
+  _torch_pytree._register_pytree_node(
+Using `is_flash_attn_available` is deprecated and will be removed in v4.38. Please use `is_flash_attn_2_available` instead.
+Using `is_flash_attn_available` is deprecated and will be removed in v4.38. Please use `is_flash_attn_2_available` instead.
+/content/medusa-env/lib/python3.11/site-packages/huggingface_hub/file_download.py:1142: FutureWarning: `resume_download` is deprecated and will be removed in version 1.0.0. Downloads always resume when possible. If you want to force a new download, use `force_download=True`.
+  warnings.warn(
+You are using the default legacy behaviour of the <class 'transformers.models.llama.tokenization_llama.LlamaTokenizer'>. This is expected, and simply means that the `legacy` (previous) behavior will be used so nothing changes for you. If you want to use the new behaviour, set `legacy=False`. This should only be set if you understand what it means, and thoroughly read the reason why this was added as explained in https://github.com/huggingface/transformers/pull/24565
+
+Loading checkpoint shards:   0%|          | 0/2 [00:00<?, ?it/s]
+Loading checkpoint shards:  50%|█████     | 1/2 [00:40<00:40, 40.15s/it]
+Loading checkpoint shards: 100%|██████████| 2/2 [00:54<00:00, 24.85s/it]
+Loading checkpoint shards: 100%|██████████| 2/2 [00:54<00:00, 27.14s/it]
+Some weights of MedusaModelLlama were not initialized from the model checkpoint at lmsys/vicuna-7b-v1.3 and are newly initialized: ['medusa_head.4.1.weight', 'medusa_head.0.0.linear.bias', 'medusa_head.2.1.weight', 'medusa_head.3.1.weight', 'medusa_head.0.0.linear.weight', 'medusa_head.3.0.linear.weight', 'medusa_head.4.0.linear.weight', 'medusa_head.0.1.weight', 'medusa_head.1.0.linear.weight', 'medusa_head.2.0.linear.weight', 'medusa_head.1.1.weight', 'medusa_head.1.0.linear.bias', 'medusa_head.4.0.linear.bias', 'medusa_head.2.0.linear.bias', 'medusa_head.3.0.linear.bias']
+You should probably TRAIN this model on a down-stream task to be able to use it for predictions and inference.
+Loaded FasterDecoding/medusa-vicuna-7b-v1.3; GPU tensors: 6.93 GiB
+Prompt 0: passed=True
+Prompt 1: passed=True
+Prompt 2: passed=True
+Prompt 3: passed=True
+Prompt 4: passed=True
+Prompt 5: passed=True
+Prompt 6: passed=False
+Precision gate FAILED; inspect /content/drive/MyDrive/ECE285_Medusa/fp32_v1/stage1/known_cases/results/precision_validation.json
+
+[exit code 1]

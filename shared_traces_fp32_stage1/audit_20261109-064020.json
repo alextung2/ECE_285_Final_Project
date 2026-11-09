@@ -1,0 +1,99 @@
+{
+  "offline_checks_passed": true,
+  "gpu_validation_performed": false,
+  "label_truth_verified": false,
+  "files": [
+    {
+      "path": "/content/drive/MyDrive/ECE285_Medusa/fp32_v1/stage1/small/traces/calib.npz",
+      "sha256": "39ced50cac7a6e24aa992708504f2d5e606db443cbb6f1ee3d394ec4762ad034",
+      "steps": 295,
+      "prompts": 5,
+      "n_heads": 5,
+      "topk": 10,
+      "source": "real",
+      "execution_contract": {
+        "schema_version": 1,
+        "model": "FasterDecoding/medusa-vicuna-7b-v1.3",
+        "precision_mode": "nf4_fp32_from_fp16",
+        "weight_storage": "nf4",
+        "double_quant": true,
+        "initial_dtype": "float16",
+        "compute_dtype": "float32",
+        "head_dtype": "float32",
+        "lm_head_fp32_input_hook": true,
+        "promotion": "floating_parameters_and_buffers",
+        "tf32": false,
+        "rank_order": "raw_logits_topk",
+        "probability_dtype": "float32",
+        "prompt_template": "vicuna_v1.1",
+        "temperature": 0.0,
+        "packages": {
+          "torch": "2.2.2+cu121",
+          "transformers": "4.36.2",
+          "bitsandbytes": "0.43.3",
+          "accelerate": "0.27.2"
+        },
+        "medusa_source_sha256": {
+          "medusa_model.py": "e96d8b4d0dce730972147d57d029e7bdc6f285bbb9fe8916092eda34e5e721d5",
+          "utils.py": "f62632ce0892cec19f3280ce02695c08e0ef84f2a2a8342040e7c75d22bfe4b7",
+          "kv_cache.py": "29bdb043c8a4835caa594b666dfba5acb56c9d774046d2c9024551f9d933f5d4",
+          "modeling_llama_kv.py": "49290d92403ac2b1e8155b9ec5ad2d2b8778035e9a25cfc95649793e7b3a19b0"
+        },
+        "loaded_heads_sha256": "cbc9046f1e3d1bda81f8ff09f8f568b353567724a80daa349b96a61485d0c476",
+        "base_revision": "236eeeab96f0dc2e463f2bebb7bb49809279c6d6",
+        "n_heads": 5,
+        "topk": 10
+      },
+      "warnings": [
+        "Dataset revision absent: obtain original collection manifest"
+      ]
+    },
+    {
+      "path": "/content/drive/MyDrive/ECE285_Medusa/fp32_v1/stage1/small/traces/eval.npz",
+      "sha256": "262c2b126d32fce70a5ff74d5f9324225108eb3f06b8e343243f7e90336b36da",
+      "steps": 177,
+      "prompts": 3,
+      "n_heads": 5,
+      "topk": 10,
+      "source": "real",
+      "execution_contract": {
+        "schema_version": 1,
+        "model": "FasterDecoding/medusa-vicuna-7b-v1.3",
+        "precision_mode": "nf4_fp32_from_fp16",
+        "weight_storage": "nf4",
+        "double_quant": true,
+        "initial_dtype": "float16",
+        "compute_dtype": "float32",
+        "head_dtype": "float32",
+        "lm_head_fp32_input_hook": true,
+        "promotion": "floating_parameters_and_buffers",
+        "tf32": false,
+        "rank_order": "raw_logits_topk",
+        "probability_dtype": "float32",
+        "prompt_template": "vicuna_v1.1",
+        "temperature": 0.0,
+        "packages": {
+          "torch": "2.2.2+cu121",
+          "transformers": "4.36.2",
+          "bitsandbytes": "0.43.3",
+          "accelerate": "0.27.2"
+        },
+        "medusa_source_sha256": {
+          "medusa_model.py": "e96d8b4d0dce730972147d57d029e7bdc6f285bbb9fe8916092eda34e5e721d5",
+          "utils.py": "f62632ce0892cec19f3280ce02695c08e0ef84f2a2a8342040e7c75d22bfe4b7",
+          "kv_cache.py": "29bdb043c8a4835caa594b666dfba5acb56c9d774046d2c9024551f9d933f5d4",
+          "modeling_llama_kv.py": "49290d92403ac2b1e8155b9ec5ad2d2b8778035e9a25cfc95649793e7b3a19b0"
+        },
+        "loaded_heads_sha256": "cbc9046f1e3d1bda81f8ff09f8f568b353567724a80daa349b96a61485d0c476",
+        "base_revision": "236eeeab96f0dc2e463f2bebb7bb49809279c6d6",
+        "n_heads": 5,
+        "topk": 10
+      },
+      "warnings": [
+        "Dataset revision absent: obtain original collection manifest"
+      ]
+    }
+  ],
+  "errors": [],
+  "split_check": "Different/unknown datasets: numeric IDs are not comparable; check source manifests for text overlap"
+}
