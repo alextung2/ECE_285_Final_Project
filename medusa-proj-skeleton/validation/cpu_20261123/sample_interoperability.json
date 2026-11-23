@@ -1,0 +1,33 @@
+{
+  "gpu_validation_performed": false,
+  "label_truth_verified": false,
+  "formal_fit_performed": false,
+  "files": {
+    "calib": {
+      "steps": 295,
+      "conditional_nodes": 8070,
+      "candidate_pool_nodes": 320,
+      "features_finite": true,
+      "budgets_valid": {
+        "8": true,
+        "16": true,
+        "32": true,
+        "63": true,
+        "96": true
+      }
+    },
+    "eval": {
+      "steps": 177,
+      "conditional_nodes": 5560,
+      "candidate_pool_nodes": 320,
+      "features_finite": true,
+      "budgets_valid": {
+        "8": true,
+        "16": true,
+        "32": true,
+        "63": true,
+        "96": true
+      }
+    }
+  }
+}

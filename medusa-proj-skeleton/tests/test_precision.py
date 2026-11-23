@@ -128,7 +128,7 @@ def test_promotion_matches_lucia_committed_patches(monkeypatch, source):
     from pathlib import Path
     from types import SimpleNamespace
     torch = pytest.importorskip('torch')
-    repo = Path(__file__).resolve().parents[2]
+    repo = Path(__file__).resolve().parents[2] / 'medusa_trace_collection' / 'precision'
     if source == 'precision_test':
         historical = runpy.run_path(str(repo / 'test_medusa_precision.py'))
         patch = historical['LM_HEAD_PATCH'] + historical['FP32_EXECUTION_PATCH']

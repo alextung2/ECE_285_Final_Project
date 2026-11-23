@@ -23,44 +23,31 @@ def main(model_and_tokenizer=None):
     if args.synthetic:
         raise SystemExit('Timing requires a real GPU model; synthetic speedups are not supported.')
     import torch
-    from mcal.collect import default_medusa_choices
     from mcal.config import out_path
     from mcal.data import load_prompts, vicuna_prompt
-    from mcal.decode import DynamicTree, StaticTree, medusa_greedy_generate, plain_greedy_generate
-    from mcal.estimators import Scorer, MedusaPlusProb
+    from mcal.decode import medusa_greedy_generate, plain_greedy_generate
     from mcal.model import load_medusa
 
     sc, B = cfg['speed'], cfg['speed']['budget']
     methods = sc.get('methods', ['medusa_default', 'medusa_plus'])
     if sc['n_prompts'] < 1 or sc['warmup_prompts'] < 1 or sc['max_new_tokens'] < 1:
         raise ValueError('Use at least one warmup, measured prompt, and generated token.')
-    from mcal.precision import require_compatible, precision_spec
+    from mcal.precision import precision_spec
     model, tok = model_and_tokenizer or load_medusa(cfg)
     expected = precision_spec(cfg["model"])
     if any(model.execution_contract.get(k) != v for k, v in expected.items()):
         raise ValueError("Reused model differs from requested precision")
     contract = dict(model.execution_contract, n_heads=model.medusa, topk=cfg['traces']['topk'])
-    policies = {}
+    from mcal.policies import load_policy
+    policies = {name: load_policy(name, B, contract, Path(cfg["out_dir"]) / "models")
+                for name in methods}
+    artifacts = []
     for name in methods:
-        if name == 'medusa_default':
-            policies[name] = StaticTree(default_medusa_choices())
-        elif name == 'medusa_plus':
-            policies[name] = DynamicTree(MedusaPlusProb(), B)
-        elif name in ('medusa_acc', 'count_cond'):
-            path = out_path(cfg, 'models', f'fixed_tree_{name}_B{B}.json')
-            payload = json.loads(path.read_text())
-            if not isinstance(payload, dict):
-                raise ValueError(f"Legacy tree lacks execution contract: {path}")
-            require_compatible(contract, payload.get('execution_contract'))
-            policies[name] = StaticTree(payload['choices'])
-            if len(policies[name].choices) != B:
-                raise ValueError(f'{path} does not contain {B} draft nodes')
+        if name in ('medusa_acc', 'count_cond'):
+            artifacts.append(Path(cfg["out_dir"]) / "models" / f"fixed_tree_{name}_B{B}.json")
         elif name in ('direct', 'logistic_cond'):
-            scorer = Scorer.load(out_path(cfg, 'models', f'{name}.pkl'))
-            require_compatible(contract, getattr(scorer, 'execution_contract', None))
-            policies[name] = DynamicTree(scorer, B)
-        else:
-            raise ValueError(f'Unknown policy: {name}')
+            artifacts.append(Path(cfg["out_dir"]) / "models" / f"{name}.pkl")
+    artifact_hashes = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in artifacts}
 
     if sc.get('prompt_file'):
         prompts = json.loads(Path(sc['prompt_file']).read_text(encoding='utf-8-sig'))
@@ -119,6 +106,7 @@ def main(model_and_tokenizer=None):
     print(write_table(rows, out_path(cfg, 'results', f'speed_B{B}.csv')))
     packages = {p: importlib.metadata.version(p) for p in ['torch','transformers','bitsandbytes','numpy']}
     metadata = dict(execution_contract=model.execution_contract, precision_audit=model.precision_audit, config=cfg, packages=packages, platform=platform.platform(),
+                    trained_artifacts_sha256=artifact_hashes,
                     gpu=torch.cuda.get_device_name(0), cuda=torch.version.cuda,
                     prompt_sha256=hashlib.sha256(json.dumps(prompts).encode()).hexdigest(),
                     timing='Prefill + generation; excludes model load, tokenization, KV allocation and fixed-buffer setup.',

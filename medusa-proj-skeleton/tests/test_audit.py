@@ -13,7 +13,8 @@ def fixture():
     ts = TraceSet(np.array([[0, -1], [1, 0]]),
                   np.array([[[.6, .2], [.5, .1]], [[.7, .1], [.4, .3]]]),
                   np.array([.5, .6]), np.array([1, 2]), np.array([0, 0]),
-                  meta=dict(source='real', execution_contract=contract, dataset='alpacaeval', dataset_revision='test'),
+                  meta=dict(source='real', execution_contract=contract, dataset='alpacaeval', dataset_revision='test',
+                            collection_complete=True),
                   topk_token=np.array([[[4, 5], [6, 7]], [[4, 5], [6, 7]]]))
     return ts, cfg
 

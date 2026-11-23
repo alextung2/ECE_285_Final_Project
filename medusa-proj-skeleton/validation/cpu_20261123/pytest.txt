@@ -1,0 +1,6 @@
+......................ss................................................ [ 84%]
+.............                                                            [100%]
+=========================== short test summary info ===========================
+SKIPPED [1] medusa-proj-skeleton\tests\test_alex.py:50: could not import 'medusa': No module named 'medusa'
+SKIPPED [1] medusa-proj-skeleton\tests\test_alex.py:60: could not import 'fastchat': No module named 'fastchat'
+83 passed, 2 skipped in 9.53s

@@ -29,8 +29,8 @@ def main():
     ev = TraceSet.load(out_path(cfg, cfg["traces"]["eval"]["file"]))
     from mcal.precision import require_trace_config, require_compatible
     from mcal.audit import audit_file, audit_pair
-    audit_file(out_path(cfg, cfg["traces"]["calib"]["file"]), cfg, args.synthetic)
-    audit_file(out_path(cfg, cfg["traces"]["eval"]["file"]), cfg, args.synthetic)
+    _, calib_audit = audit_file(out_path(cfg, cfg["traces"]["calib"]["file"]), cfg, args.synthetic)
+    _, eval_audit = audit_file(out_path(cfg, cfg["traces"]["eval"]["file"]), cfg, args.synthetic)
     audit_pair(calib, ev)
     contract = require_trace_config(calib, cfg, args.synthetic)
     require_compatible(contract, require_trace_config(ev, cfg, args.synthetic))
@@ -44,6 +44,12 @@ def main():
     steps = np.sort(rng.choice(ev.n_steps, n_eval, replace=False)) if n_eval and n_eval < ev.n_steps \
         else np.arange(ev.n_steps)
     groups = ev.prompt_id[steps]
+    metadata = dict(execution_contract=contract, config=cfg, timing_benchmark=False,
+                    source="synthetic" if args.synthetic else "real_traces",
+                    input_audits=dict(calib=calib_audit, evaluation=eval_audit),
+                    evaluation_steps=steps.tolist(), evaluation_prompt_ids=np.unique(groups).tolist(),
+                    correctness_validation="Not performed here; requires separate GPU precision reports")
+    out_path(cfg, "results", "tree_comparison_metadata.json").write_text(json.dumps(metadata, indent=2))
 
     # (method, kind, baseline-for-CI)
     plan = [("medusa_acc", "fixed", None), ("count_cond", "fixed", "medusa_acc"),

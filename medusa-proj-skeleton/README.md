@@ -1,5 +1,10 @@
 ## Precision and interoperability
 
+For the current status and prepared DataHub workflow, start with
+[FINAL_EXPERIMENTS.md](FINAL_EXPERIMENTS.md). The November 23 CPU checks pass,
+but the latest committed FP32 GPU gate still fails. The new preparation step
+also removes one recorded training/evaluation text duplicate from future inputs.
+
 Ada's code is reconciled in the canonical package. Use
 [the integrated calibration notebook](../Step%202%20Calibration%20Integrated.ipynb)
 and read [ADA_HANDOFF.md](ADA_HANDOFF.md) for CPU tests, model compatibility,

@@ -48,11 +48,15 @@ def audit_file(path, cfg, synthetic=False):
     path = Path(path)
     ts = TraceSet.load(path)
     validate_arrays(ts)
+    from .provenance import check_collection_status
+    check_collection_status(ts)
     contract = require_trace_config(ts, cfg, synthetic)
     if ts.topk != cfg['traces']['topk']:
         raise ValueError('Trace top-K differs from configuration')
     warnings = []
     if not synthetic:
+        if "collection_complete" not in ts.meta:
+            warnings.append('Collection completion not recorded: verify exact source prompt coverage')
         for key in ('packages', 'medusa_source_sha256', 'loaded_heads_sha256', 'base_revision'):
             if not contract.get(key):
                 raise ValueError(f'Missing runtime provenance: {key}')

@@ -13,6 +13,10 @@ Historical inputs, scripts, diagnostics, and pilot outputs for the Medusa trace 
 
 Use `medusa_trace_collection/prompts/` for the four prompt and manifest JSON files and `medusa_trace_collection/precision/` for the FP32 candidate loader and precision test.
 
-The Colab checkout check and the project precision regression test still refer to the former root paths. Update those references to the paths above before running them against this layout. For the earlier layout, see [commit `41fcae9`](https://github.com/alextung2/ECE_285_Final_Project/tree/41fcae9456435c50294a24d3242e91f62524269c).
+The canonical precision regression tests now read the archived paths above.
+For a new final collection, use [the prepared experiment workflow](../medusa-proj-skeleton/FINAL_EXPERIMENTS.md);
+the historical Colab workflow uses an earlier prompt split containing a
+training/evaluation text duplicate. Original artifacts remain unchanged.
+For the earlier layout, see [commit `41fcae9`](https://github.com/alextung2/ECE_285_Final_Project/tree/41fcae9456435c50294a24d3242e91f62524269c).
 
 The [FP32 Stage 1 samples and audit](../shared_traces_fp32_stage1/) contain the later calibration and evaluation NPZ files and strict gate logs. See the [precision guide](../medusa-proj-skeleton/PRECISION.md) for the current collection and validation workflow.
