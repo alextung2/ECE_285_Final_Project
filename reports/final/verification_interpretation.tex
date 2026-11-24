@@ -1,0 +1,14 @@
+\begin{table}[ht]\centering
+\caption{Verification on the trained-policy panel. Each row has a different unit. A single reference position can be visited by multiple policies.}
+\begin{tabular}{lrr}\toprule
+Comparison & Disagreements & Observations\\\midrule
+Final output token sequences & 0 & 80 runs\\
+Any head/rank difference & 182 & 1,858 full-horizon rounds\\
+Individual selected-node labels & 8 & 71,276 node labels\\
+Total matching selected nodes & 0 & 1,858 full-horizon rounds\\\bottomrule
+\end{tabular}
+\end{table}
+
+The measurements answer different reproducibility questions. A final-output check detects a changed continuation. A count check can detect a replay error that changes the estimated benefit of a tree even when the final sequence is unchanged. A node-level check can detect a compensating pair of errors that both coarser checks miss. The observed swap on question 141 is an example of that last case. Reporting only output agreement would conceal it.
+
+The full-candidate check is stricter still: it includes unselected nodes that cannot affect the current verification round. The historical head-five discrepancy illustrates the difference. Recording both the changed rank and whether it entered the tree makes that diagnostic interpretable.

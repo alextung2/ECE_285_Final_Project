@@ -24,7 +24,7 @@ The timed runs can be audited with `python reports/final/audit_timing.py reports
 
 ## Build the report
 
-The editable source starts at [ECE285_Final_Report.tex](ECE285_Final_Report.tex). Compile twice with pdfLaTeX from this directory. The source includes the result tables and the paired-interval figure. To regenerate those files after reproducing the study, run the following from the repository root:
+The editable source starts at [ECE285_Final_Report.tex](ECE285_Final_Report.tex). The PDF uses the [official NeurIPS 2026 style](https://neurips.cc/Conferences/2026/CallForPapers) with a course-report footer. It has nine pages of main text followed by references. Compile twice with pdfLaTeX from this directory. Run `python render_example.py` here to redraw the two-slot illustration. The reliability plot and measurement tables use the archived evidence. To regenerate those files after reproducing the study, run the following from the repository root:
 
 ```text
 python reports/final/render_tables.py medusa-proj-skeleton/outputs/final_tuned/real --out reports/final/tables
