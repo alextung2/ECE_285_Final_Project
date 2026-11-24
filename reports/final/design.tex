@@ -4,6 +4,14 @@
 
 Training yielded 10,854 complete five-head horizons on 196 prompts. Validation yielded 2,748 on 49 prompts. Three training answers and one validation answer reached EOS before a full horizon and supplied zero labeled states. The coverage manifest retains all four. Only positions with all five future targets enter replay. The endpoint therefore describes interior states of bounded generations.
 
+\begin{center}
+\begin{tabular}{lrrrr}\toprule
+Split & Input prompts & Eligible prompts & States & Head labels\\\midrule
+AlpacaEval train & 199 & 196 & 10,854 & 54,270\\
+AlpacaEval validation & 50 & 49 & 2,748 & 13,740\\
+MT-Bench test & 80 & 80 & 4,280 & 21,400\\\bottomrule
+\end{tabular}
+\end{center}
 \textbf{Model selection.} The integrated calibration notebook tunes count smoothing and logistic regularization and rank cap on the validation prompts. It compares three candidate-pool constructions for the direct classifier by validation acceptance at $B=63$. The common calibration pool uses MEDUSA+ to select 64 candidate paths per sampled state (up to 4,000 states per split). Brier score averages squared path-probability errors. Expected calibration error (ECE) uses 15 fixed-width probability bins. A grouped feature ablation refits the conditional classifier with each feature group omitted. The frozen notebook fixes the seed and comparison rules before the evaluation results are used.
 
 \textbf{Endpoints.} Replay scores all five trees at each eligible evaluation state and weights states equally. We use 2,000 paired prompt-bootstrap resamples for differences, retaining all states from each sampled prompt. The fixed contrast uses the marginal tree as its baseline. The dynamic contrast uses MEDUSA+. These are per-budget intervals. The analysis treats the family of budget comparisons as exploratory.

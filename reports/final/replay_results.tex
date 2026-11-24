@@ -1,0 +1,13 @@
+\input{dependence}
+\paragraph{Equal-budget comparison.} Each policy selects the same number of nonroot nodes. All 80 evaluation questions contributed, with a median of 59 complete states per question and a range of 1 to 59. The last two columns of Table~\ref{tab:replay} refer to a shared path pool and are independent of budget.
+\begin{table}[ht]\centering
+\caption{Mean committed tokens per eligible MT-Bench state at five draft budgets. The final columns report path prediction error (lower is better).}\label{tab:replay}
+\input{tables/acceptance}
+\end{table}
+
+The fixed conditional tree gained the most at $B=8$, from 2.106 to 2.150 tokens per state (2.10\%). Its improvement persisted at $B=63$ ($+0.0192$, 95\% paired interval $[0.0063,0.0341]$). MEDUSA+ exceeded both fixed trees at every budget. With 63 nodes, fitting conditional factors changed dynamic acceptance from 2.7264 to 2.7306 ($+0.0042$, interval $[-0.0009,0.0090]$). The direct classifier reached 2.7299.
+\begin{figure}[ht]\centering
+\includegraphics[width=.96\linewidth]{tables/paired_acceptance.pdf}
+\caption{Change in accepted tokens at equal budgets. Bars are per-budget 95\% paired prompt-bootstrap intervals on the same vertical scale. Every fixed contrast favors conditioning. The dynamic contrasts each admit gains and losses.}
+\end{figure}
+Increasing the budget from 63 to 96 adds 33 draft nodes. Even the best observed mean increases by only about 0.06 tokens per eligible state over that range. This diminishing return motivates measuring the cost of wider verification directly.

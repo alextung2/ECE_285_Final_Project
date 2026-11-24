@@ -1,0 +1,21 @@
+\paragraph{End-to-end timing.} We aggregate the generated tokens and elapsed time over eight questions. Each ratio uses the cached greedy baseline measured within its budget run. Every policy emitted the reference tokens on each question.
+\begin{table}[ht]\centering
+\caption{Throughput in generated tokens per second, speed relative to cached greedy and exact output matches on the timed panel.}
+\input{tables/timing}
+\end{table}
+At $B=16$, MEDUSA+ was the fastest speculative policy at 9.60 tokens/s, versus 9.92 for greedy. At $B=63$, the fixed marginal tree led the speculative policies at 8.98 tokens/s, versus 10.64 for greedy. Fixed conditional scored better on full replay but committed fewer tokens per live round than fixed marginal at $B=63$. Online, each method visits the states reached by its own previous commits. The panel also covers a subset of the replay prompts.
+\begin{table}[ht]\centering
+\caption{Live tokens committed per round (eight prompts) alongside time to score, construct and prepare the tree per round (ms, separate synchronized first-prompt profile). The profiling scope excludes the verifier forward.}
+\begin{tabular}{lrrrr}\toprule
+&\multicolumn{2}{c}{$B=16$}&\multicolumn{2}{c}{$B=63$}\\
+Policy & Tokens/round & Tree ms & Tokens/round & Tree ms\\\midrule
+Fixed marginal & 2.220 & 0.09 & 2.469 & 0.10\\
+Fixed conditional & 2.220 & 0.08 & 2.444 & 0.10\\
+MEDUSA+ & 2.294 & 2.57 & 2.508 & 8.06\\
+Direct classifier & 2.305 & 6.73 & 2.508 & 20.60\\
+Dynamic conditional & 2.305 & 6.90 & 2.495 & 20.42\\\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Variation across questions.} Each method generated 484 tokens across the panel at each budget. MEDUSA+ finished sooner than greedy on four of eight questions at $B=16$ and two at $B=63$. The corresponding counts for fixed conditional were three and one. These are within-question comparisons from one timed pass. They show why a single example can suggest a different speed ordering from aggregate throughput.
+\paragraph{Where is break-even?} At $B=63$ the conditional logistic policy committed 2.495 tokens per live round. At 10.64 greedy tokens/s, those tokens take about 235 ms to emit. Its measured throughput of 8.26 tokens/s implies about 302 ms of end-to-end time per round, including amortized prefill. With acceptance held fixed, matching greedy would require recovering roughly 68 ms per round. The 20.42 ms tree profile concerns one prompt in a separate pass, so it cannot partition that panel-wide gap. It does identify a concrete cost that grows with the draft budget.

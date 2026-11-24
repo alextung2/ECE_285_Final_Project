@@ -1,45 +1,96 @@
-\documentclass[11pt]{article}
-\usepackage[margin=0.9in]{geometry}
+\documentclass{article}
+\usepackage[preprint,nonatbib]{neurips_2026}
 \input{glyphtounicode}
 \pdfgentounicode=1
-\usepackage{amsmath,booktabs,graphicx}
-\usepackage[colorlinks=true,urlcolor=blue,linkcolor=black,citecolor=black]{hyperref}
-
-\setlength{\parindent}{0pt}
-\setlength{\parskip}{0.45em}
+\usepackage{amsmath,amssymb,booktabs,graphicx}
+\usepackage[hidelinks]{hyperref}
+\makeatletter
+\renewcommand{\@noticestring}{ECE 285 final project report, University of California San Diego, Fall 2026.}
+\makeatother
 \title{Conditional Acceptance Calibration for Dynamic Medusa Decoding}
-\author{ECE 285 project team\\Ada Qi, Alexander Tung, and Zhuoting Yang\\University of California San Diego}
-\date{November 2026}
+\author{Ada Qi \qquad Alexander Tung \qquad Zhuoting Yang\\University of California San Diego}
 \begin{document}
 \maketitle
 \begin{abstract}
 \input{findings}
 \end{abstract}
 \section{Which branches should a verifier check?}
-Medusa predicts several future tokens from one hidden state. A verifier evaluates a tree of candidate continuations in parallel and commits its longest matching prefix. Each extra draft node consumes verification capacity. With a fixed capacity, the choice between a likely sibling and a deeper continuation therefore affects how many tokens a round can commit. We study that choice on a frozen Vicuna-7B Medusa-1 checkpoint. Only the rule for scoring branches changes.
+Medusa predicts several future tokens from one hidden state. Its verifier evaluates a tree of candidate continuations in parallel and commits the longest matching prefix. Each extra draft node consumes verification capacity. At a fixed capacity, should the verifier allocate its last slot to another likely first token or extend a branch that already looks promising?
 
-Medusa uses head accuracy to construct a fixed tree \cite{medusa}. Dynamic tree attention permits a different tree at each state \cite{plus}. Classifier-based tree construction can also use features beyond a product of token probabilities \cite{direct}. To isolate the effect of scoring, our implementation uses the same five frozen heads, ten candidate ranks per head, best-first tree builder, and draft-node budgets for every policy. The direct classifier is a matched-budget adaptation inspired by C2T.
-\section{Scoring and selecting paths}
-At a state $x$, let $S_v$ be the event that the rank path $v=(r_1,\ldots,r_d)$ matches the next $d$ draft targets following the backbone token. Acceptance of a child entails acceptance of its parent. The chain rule gives
+A per-head accuracy table can undervalue an extension. A second head might be accurate precisely on states where the first head was right. On our training and validation traces, the first two top-ranked tokens jointly match the continuation 19.66\% of the time. Multiplying their separate hit rates predicts only 14.30\%. The practical question is whether correcting this error changes which branches are worth verifying, and ultimately how fast the verifier emits tokens.
+
+\paragraph{Contributions.} We derive an expected-token objective for prefix-closed trees and compare two estimators of its conditional factors with three matched-budget alternatives. We separate the effects of conditioning a fixed rank table from conditioning a scorer that already sees state-specific probabilities. Finally, we follow the offline result through live verification and wall-clock timing, checking output tokens, ranked candidates and individual selected-node labels. These measurements let us distinguish a better estimate, a better tree, and a faster decoder.
+\clearpage
+\section{Related work and a two-slot example}
+Speculative decoding uses a target model to verify proposals in parallel. Leviathan et al.\ show how to preserve the target distribution under sampling \cite{spec}. We study the simpler greedy setting, where a proposed token can be checked against a single reference continuation. Medusa obtains proposals for several offsets from parallel heads on one backbone and verifies candidate paths with tree attention \cite{medusa}. Its fixed rank tree gives a natural baseline for measuring whether heads succeed together.
+
+Hydra makes draft heads sequentially dependent \cite{hydra}. Our experiment holds the prediction heads fixed and estimates dependence when selecting among their existing proposals. MEDUSA+ builds a state-dependent tree using current head probabilities \cite{plus}. C2T learns to score candidate nodes \cite{direct}. We use a direct logistic path classifier inspired by that approach so that both learned alternatives face the same tree builder and budget. Our comparisons concern these implementations on the shared checkpoint.
+
+\paragraph{Worked example.} Suppose rank one of the first head matches with probability .55 and rank two with probability .30. The next head's marginal top-rank probability is .45. After selecting the .55 node, the marginal product assigns its top child $.55\times .45=.2475$, so the .30 sibling gets the second slot. If the child's hit probability given a correct parent is .65, the path instead scores $.55\times .65=.3575$ and takes that slot. Assume all remaining candidates score below both contenders.
+\begin{figure}[ht]
+\centering
+\includegraphics[width=.93\linewidth]{tables/two_slots.pdf}
+\caption{Two verification trees under a budget of two draft nodes. Solid edges enter the tree. Dashed edges show the competing branch. Node labels give path probabilities under each scoring rule. The backbone root costs no draft slot. Numbers are illustrative.}
+\end{figure}
+Under the stated conditional probabilities, the expected committed count rises from $1+.55+.30=1.85$ to $1+.55+.3575=1.9075$. A round can still favor the sibling tree, for example when the reference starts with rank two. The comparison averages over possible reference paths from this state.
+
+\paragraph{Where does this choice arise in the data?} Restrict the parent to a sequence of top-ranked hits. For the next head the gap between marginal and surviving-parent hit rates widens with depth, while the support for the conditional estimate falls:
+\begin{center}
+\begin{tabular}{lrrrr}\toprule
+Next head & 2 & 3 & 4 & 5\\\midrule
+Marginal top-rank hit rate (\%) & 28.39 & 17.96 & 12.90 & 9.88\\
+Given all preceding top ranks hit (\%) & 39.03 & 37.55 & 42.23 & 47.41\\
+Surviving parent states & 6,852 & 2,674 & 1,004 & 424\\\bottomrule
+\end{tabular}
+\end{center}
+These training and validation counts explain why the fixed estimator pools evidence for rare parents. Even a large conditional edge probability can belong to a low-probability path if few states reach its parent.
+\clearpage
+\section{Objective, optimal tree and scoring policies}
+Let $x$ denote the current state. For a rank path $v=(r_1,\ldots,r_d)$, let $S_v$ mean that its proposed tokens match the first $d$ draft targets after the backbone token. The root event is certain. A tree $T$ contains at most $B$ nonroot nodes and contains the parent of every selected nonroot node, with the root implicit.
+\paragraph{Proposition.} On a complete-horizon greedy continuation, the expected committed count equals $1+\sum_{v\in T}P(S_v\mid x)$. For any path scores nonincreasing from parent to child, best-first frontier expansion maximizes the sum of selected scores among trees of exactly $B$ nodes, provided at least $B$ nodes exist.
+\paragraph{Proof.} At a given depth there is at most one path matching the reference because token ranks within each head are distinct. Every matching selected node also has all its matching ancestors in the tree. Thus the number of matching draft nodes is exactly the length of the longest matching selected path. Adding the backbone token and taking conditional expectations gives the first assertion by linearity. For the second, start with only the root. Every unselected node is either on the frontier or below a frontier ancestor. Monotonicity bounds its score by that ancestor's score. A maximum frontier node is therefore a maximum among \emph{all} remaining nodes. Adding it preserves prefix closure. Repeating the argument selects $B$ globally largest scores, allowing arbitrary choices among ties, and their sum bounds that of every other size-$B$ set. True path probabilities are monotone since a child match entails a parent match. With those scores, the same tree maximizes the expected count. \hfill$\square$
+
+\paragraph{Estimating a path score.} For nonzero-probability prefixes the chain rule gives
 \[
- P(S_v\mid x)=\prod_{i=1}^{d}P(S_{v_{1:i}}\mid S_{v_{1:i-1}},x).
+P(S_v\mid x)=\prod_{i=1}^d P(S_{v_{1:i}}\mid S_{v_{1:i-1}},x).
 \]
-The first parent is always accepted. The expected token count for a prefix-closed tree $T$ is
-$1+\sum_{v\in T}P(S_v\mid x)$ by linearity of expectation. The one counts the backbone token. With monotone scores, best-first expansion selects the highest-scoring feasible frontier node at each step. Every hidden descendant scores at most as high as its frontier ancestor. Induction therefore gives a maximum-score prefix-closed set of $B$ nodes. Maximizing actual expected acceptance additionally requires accurate ordering of path probabilities.
-
-\textbf{Fixed policies.} The marginal baseline multiplies per-head rank hit rates from training. The count estimator fits a conditional hit rate among states in which the parent matched. It groups examples by depth, preceding rank and child rank, and shrinks sparse cells toward the marginal baseline. Each estimator yields one tree per budget.
-
-\textbf{Dynamic policies.} MEDUSA+ multiplies current head probabilities along the path. Conditional logistic regression fits the probability of a child hit on accepted-parent examples and multiplies its fitted factors. The direct logistic classifier predicts the whole-path label on a candidate pool and caps each child score at its parent's score. Both logistic methods use the repository's grouped rank and confidence features. The learned scores can change the tree at each state.
+A zero-probability prefix gives every descendant score zero. The five policies differ in how they estimate or approximate this expression.
+\begin{itemize}
+\item \textbf{Fixed marginal} multiplies training hit rates for the rank at each depth. \textbf{Fixed conditional} estimates a child-rank hit rate among matching parents, grouped by depth and preceding rank. It smooths toward the accepted-parent rate pooled across preceding ranks at that depth.
+\item \textbf{MEDUSA+} multiplies the current head probabilities of the proposed tokens. \textbf{Dynamic conditional} fits logistic edge probabilities among matching parents and multiplies the fitted factors. Confidence and rank features allow the estimates to vary by state.
+\item \textbf{Direct classifier} fits a logistic whole-path label on candidate nodes. Capping each child score at its parent's score enforces the ordering needed by the frontier argument.
+\end{itemize}
+\paragraph{Sparse counts.} If $n$ sampled parents match in a depth--parent-rank cell and $h$ of their children hit the requested rank, the count policy uses $(h+\alpha q)/(n+\alpha)$. Here $q$ is the pooled child-rank hit rate at the same depth. An empty cell therefore inherits $q$, while a frequently observed cell approaches its empirical $h/n$. Pooling across parent ranks lets deep nodes borrow observations without assuming the same accuracy at every depth.
+Even a monotone fitted score can order two competing branches incorrectly. The proof establishes the optimum for the score supplied to the builder. The replay experiment measures the quality of that order against observed continuations.
+\clearpage
 \section{Experimental design}
 \input{design}
-\section{Results}
-\input{results}
-\section{Interpretation and limitations}
+\clearpage
+\section{Head dependence and matched-budget replay}
+\input{replay_results}
+\clearpage
+\section{Calibration and feature ablations}
+\input{calibration_page}
+\clearpage
+\section{Numerical agreement during live verification}
+\input{precision}
+\paragraph{Trained-policy verification.} \input{live_agreement}
+\input{verification_interpretation}
+\clearpage
+\section{Does greater acceptance improve throughput?}
+\input{timing_page}
+\clearpage
+\section{Discussion}
 \input{discussion}
+\section{Conclusion}
+For a decoder limited to a fixed rank tree, estimating hit rates on surviving prefixes is a practical improvement: it changed branch selection enough to raise accepted tokens at all five budgets on MT-Bench. Once the scorer had access to current head probabilities, the data left the incremental acceptance benefit of fitted conditional factors unresolved. All five implementations reproduced the greedy outputs on the measured panel, and cached greedy had the highest throughput at both budgets. A deployment decision therefore needs the cost of constructing and verifying a tree alongside the tokens that tree saves.
+\clearpage
 \begin{thebibliography}{9}
+\bibitem{spec} Y. Leviathan, M. Kalman, and Y. Matias. Fast Inference from Transformers via Speculative Decoding. ICML, 2023. \url{https://proceedings.mlr.press/v202/leviathan23a.html}
 \bibitem{medusa} T. Cai et al. Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads. ICML, 2024. \url{https://proceedings.mlr.press/v235/cai24b.html}
+\bibitem{hydra} Z. Ankner et al. Hydra: Sequentially-Dependent Draft Heads for Medusa Decoding. 2024. \url{https://arxiv.org/abs/2402.05109}
 \bibitem{plus} Z. Zhang. Acceleration Multiple Heads Decoding for LLM via Dynamic Tree Attention. 2025. \url{https://arxiv.org/abs/2502.05947}
 \bibitem{direct} F. Huo et al. C2T: A Classifier-Based Tree Construction Method in Speculative Decoding. 2025. \url{https://arxiv.org/abs/2502.13652}
-\bibitem{code} ECE 285 project repository. Trace contracts, prompt manifests, calibration and verification implementations. \url{https://github.com/alextung2/ECE_285_Final_Project}
+\bibitem{code} ECE 285 project team. Trace contracts, prompt manifests, calibration and verification implementations. \url{https://github.com/alextung2/ECE_285_Final_Project}
 \end{thebibliography}
 \end{document}
