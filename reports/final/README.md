@@ -20,6 +20,8 @@ python reports/final/audit_replay.py replay_check --out replay_check/audit.json
 
 Compare the result with the [committed audit](evidence/trace_audit.json). Both consolidated archive hashes also match the inputs recorded by the [tree comparison](evidence/tree_comparison_metadata.json).
 
+The timed runs can be audited with `python reports/final/audit_timing.py reports/final/evidence`. The script recomputes throughput, accepted tokens, speed ratios and exact output agreement from the per-prompt records.
+
 ## Build the report
 
 The editable source starts at [ECE285_Final_Report.tex](ECE285_Final_Report.tex). Compile twice with pdfLaTeX from this directory. The source includes the result tables and the paired-interval figure. To regenerate those files after reproducing the study, run the following from the repository root:
