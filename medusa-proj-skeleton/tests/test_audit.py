@@ -59,3 +59,14 @@ def test_missing_runtime_provenance_rejected(tmp_path):
     path = tmp_path / 'trace.npz'
     ts.save(path)
     with pytest.raises(ValueError, match='runtime provenance'): audit_file(path, cfg)
+
+
+@pytest.mark.parametrize("field", ["feature_source", "label_reference"])
+def test_same_runtime_cannot_mix_replay_protocols(field):
+    train, _ = fixture()
+    test, _ = fixture()
+    test.meta["dataset"] = "mtbench"
+    train.meta[field] = "same_forward_cached_greedy"
+    test.meta[field] = "teacher_forced"
+    with pytest.raises(ValueError, match=field):
+        audit_pair(train, test)

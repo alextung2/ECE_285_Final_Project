@@ -1,0 +1,23 @@
+{
+  "calib": {
+    "input_prompts": 249,
+    "scored_prompts": 245,
+    "positions": 13602,
+    "zero_horizon_ids": [
+      667,
+      638,
+      262,
+      199
+    ],
+    "verified_head_labels": 68010,
+    "archive_sha256": "82f3ddb35564d1c8abc828f70219735cac92e31bd23b39f08ced9823d08056b8"
+  },
+  "eval": {
+    "input_prompts": 80,
+    "scored_prompts": 80,
+    "positions": 4280,
+    "zero_horizon_ids": [],
+    "verified_head_labels": 21400,
+    "archive_sha256": "2dd50363c74b31b79c934fdd76adca8fa36ce97103bb794465068e445c95d82f"
+  }
+}

@@ -77,6 +77,9 @@ def audit_file(path, cfg, synthetic=False):
 
 def audit_pair(calib, evaluation):
     require_compatible(trace_contract(calib), trace_contract(evaluation))
+    for field in ("feature_source", "label_reference"):
+        if calib.meta.get(field) != evaluation.meta.get(field):
+            raise ValueError(f"Calibration/evaluation trace protocols differ in {field}")
     # Dataset-local integers cannot establish cross-dataset prompt identity.
     dataset = calib.meta.get('dataset')
     if dataset and dataset == evaluation.meta.get('dataset'):

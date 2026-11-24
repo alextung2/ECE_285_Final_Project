@@ -39,14 +39,15 @@ def main():
         evidence = json.loads(path.with_suffix(".json").read_text())
         saved = evidence["generated_ids"]
         same_reference = saved == reference[0, ids.shape[1]:].tolist()
-        ts = TraceSet.load(path.with_suffix(".npz"))
-        require_compatible(contract, trace_contract(ts))
+        ts = TraceSet.load(path.with_suffix(".npz")) if evidence["positions"] else None
+        if ts is not None:
+            require_compatible(contract, trace_contract(ts))
         for (b, name), policy in policies.items():
-            observer = TraceObserver(ts, reference, ids.shape[1])
+            observer = TraceObserver(ts, reference, ids.shape[1]) if ts is not None else None
             actual, _ = medusa_greedy_generate(model, ids, policy, cfg["speed"]["max_new_tokens"], observer=observer)
             results.append(dict(question_id=pid, category=entry["category"], budget=b, method=name,
                                 saved_reference_agrees=same_reference, output_agrees=torch.equal(reference, actual),
-                                rounds=observer.rows))
+                                rounds=observer.rows if observer is not None else []))
         output.write_text(json.dumps(results), encoding="utf-8")
         print("Verified panel question", pid, flush=True)
 
