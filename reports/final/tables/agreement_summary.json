@@ -1,0 +1,12 @@
+{
+  "policy_prompt_runs": 80,
+  "outputs_agree": 80,
+  "saved_reference_agrees": 80,
+  "complete_rounds": 1858,
+  "divergent_prefix": 0,
+  "rank_changed_rounds": 182,
+  "changed_selected_slots": 104,
+  "changed_rank_slots": 332,
+  "selected_nodes": 71276,
+  "label_mismatches": 8
+}

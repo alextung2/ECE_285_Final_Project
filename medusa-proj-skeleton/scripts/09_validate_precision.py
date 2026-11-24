@@ -20,6 +20,8 @@ PROMPTS = [
 
 def extra(ap):
     ap.add_argument('--prompt-file', type=Path)
+    ap.add_argument('--trained-model-dir', type=Path,
+                    help='Also validate all five fitted policies at every configured budget, without timing')
 
 
 def main():
@@ -48,6 +50,20 @@ def main():
     dest = out_path(cfg, 'results', 'precision_validation.json')
     if dest.exists():
         raise FileExistsError('Use a new out_dir; preserve previous validation evidence')
+    policies = [('static', StaticTree(default_medusa_choices()))] + [
+        (f'dynamic_B{b}', DynamicTree(MedusaPlusProb(), b)) for b in cfg['compare']['budgets']]
+    if args.trained_model_dir:
+        import hashlib
+        from mcal.policies import load_policy
+        contract = dict(model.execution_contract, n_heads=model.medusa, topk=cfg['traces']['topk'])
+        for b in cfg['compare']['budgets']:
+            for name in ('medusa_acc', 'count_cond', 'medusa_plus', 'direct', 'logistic_cond'):
+                policies.append((f'{name}_B{b}', load_policy(name, b, contract, args.trained_model_dir)))
+        report['trained_artifacts_sha256'] = {
+            p.name: hashlib.sha256(p.read_bytes()).hexdigest()
+            for p in sorted(args.trained_model_dir.iterdir()) if p.suffix in ('.pkl', '.json')}
+    report['max_new_tokens'] = limit
+    report['policy_names'] = [name for name, _ in policies]
     for i, prompt in enumerate(prompts):
         row = dict(prompt=prompt, policies=[], passed=False)
         report['prompts'].append(row)
@@ -63,8 +79,6 @@ def main():
             row['uncached_ids'] = uncached[0, ids.shape[1]:].tolist()
             row['cached_uncached_agree'] = torch.equal(reference, uncached)
             ts, _ = traces_for_prompt(model, tok, prompt, i, max_new_tokens=limit, keep_tokens=True)
-            policies = [('static', StaticTree(default_medusa_choices()))] + [
-                (f'dynamic_B{b}', DynamicTree(MedusaPlusProb(), b)) for b in cfg['compare']['budgets']]
             for name, policy in policies:
                 observer = TraceObserver(ts, reference, ids.shape[1])
                 output, _ = medusa_greedy_generate(model, ids, policy, limit, observer=observer)

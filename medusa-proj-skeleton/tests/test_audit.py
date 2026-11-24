@@ -13,7 +13,8 @@ def fixture():
     ts = TraceSet(np.array([[0, -1], [1, 0]]),
                   np.array([[[.6, .2], [.5, .1]], [[.7, .1], [.4, .3]]]),
                   np.array([.5, .6]), np.array([1, 2]), np.array([0, 0]),
-                  meta=dict(source='real', execution_contract=contract, dataset='alpacaeval', dataset_revision='test'),
+                  meta=dict(source='real', execution_contract=contract, dataset='alpacaeval', dataset_revision='test',
+                            collection_complete=True),
                   topk_token=np.array([[[4, 5], [6, 7]], [[4, 5], [6, 7]]]))
     return ts, cfg
 
@@ -58,3 +59,14 @@ def test_missing_runtime_provenance_rejected(tmp_path):
     path = tmp_path / 'trace.npz'
     ts.save(path)
     with pytest.raises(ValueError, match='runtime provenance'): audit_file(path, cfg)
+
+
+@pytest.mark.parametrize("field", ["feature_source", "label_reference"])
+def test_same_runtime_cannot_mix_replay_protocols(field):
+    train, _ = fixture()
+    test, _ = fixture()
+    test.meta["dataset"] = "mtbench"
+    train.meta[field] = "same_forward_cached_greedy"
+    test.meta[field] = "teacher_forced"
+    with pytest.raises(ValueError, match=field):
+        audit_pair(train, test)

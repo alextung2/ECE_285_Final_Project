@@ -1,0 +1,1583 @@
+{
+  "execution_contract": {
+    "schema_version": 1,
+    "model": "FasterDecoding/medusa-vicuna-7b-v1.3",
+    "precision_mode": "nf4_fp32_from_fp16",
+    "weight_storage": "nf4",
+    "double_quant": true,
+    "initial_dtype": "float16",
+    "compute_dtype": "float32",
+    "head_dtype": "float32",
+    "lm_head_fp32_input_hook": true,
+    "promotion": "floating_parameters_and_buffers",
+    "tf32": false,
+    "rank_order": "raw_logits_topk",
+    "probability_dtype": "float32",
+    "prompt_template": "vicuna_v1.1",
+    "temperature": 0.0,
+    "packages": {
+      "torch": "2.2.2+cu118",
+      "transformers": "4.36.2",
+      "bitsandbytes": "0.43.3",
+      "accelerate": "0.27.2"
+    },
+    "medusa_source_sha256": {
+      "medusa_model.py": "2185b09681c8adca3a26b8358e459530c0d083d13265cc9fc348c4b0e1dfbcf9",
+      "utils.py": "e28d3b949a976791e09419d422e06ba82c7d30e50b62e90b7f1fb957688372fd",
+      "kv_cache.py": "e84881b1e7789ecd461d51d59fec166b181274be67d0ee4728b06da1d082e1f3",
+      "modeling_llama_kv.py": "ebcaae08102054b78338bf2af36117db03b256de7f5229ad7b79b1efeaa4b853"
+    },
+    "loaded_heads_sha256": "cbc9046f1e3d1bda81f8ff09f8f568b353567724a80daa349b96a61485d0c476",
+    "base_revision": "236eeeab96f0dc2e463f2bebb7bb49809279c6d6",
+    "n_heads": 5,
+    "topk": 10
+  },
+  "feature_schema": "ada_grouped_v1",
+  "data": "C:\\Users\\alex_tung\\OneDrive\\\u6587\u4ef6\\New project\\ECE285-final-study\\medusa-proj-skeleton\\outputs\\final_frozen\\cached_reference\\calib.npz",
+  "trace_meta": {
+    "source": "real",
+    "execution_contract": {
+      "schema_version": 1,
+      "model": "FasterDecoding/medusa-vicuna-7b-v1.3",
+      "precision_mode": "nf4_fp32_from_fp16",
+      "weight_storage": "nf4",
+      "double_quant": true,
+      "initial_dtype": "float16",
+      "compute_dtype": "float32",
+      "head_dtype": "float32",
+      "lm_head_fp32_input_hook": true,
+      "promotion": "floating_parameters_and_buffers",
+      "tf32": false,
+      "rank_order": "raw_logits_topk",
+      "probability_dtype": "float32",
+      "prompt_template": "vicuna_v1.1",
+      "temperature": 0.0,
+      "packages": {
+        "torch": "2.2.2+cu118",
+        "transformers": "4.36.2",
+        "bitsandbytes": "0.43.3",
+        "accelerate": "0.27.2"
+      },
+      "medusa_source_sha256": {
+        "medusa_model.py": "2185b09681c8adca3a26b8358e459530c0d083d13265cc9fc348c4b0e1dfbcf9",
+        "utils.py": "e28d3b949a976791e09419d422e06ba82c7d30e50b62e90b7f1fb957688372fd",
+        "kv_cache.py": "e84881b1e7789ecd461d51d59fec166b181274be67d0ee4728b06da1d082e1f3",
+        "modeling_llama_kv.py": "ebcaae08102054b78338bf2af36117db03b256de7f5229ad7b79b1efeaa4b853"
+      },
+      "loaded_heads_sha256": "cbc9046f1e3d1bda81f8ff09f8f568b353567724a80daa349b96a61485d0c476",
+      "base_revision": "236eeeab96f0dc2e463f2bebb7bb49809279c6d6"
+    },
+    "label_reference": "same_forward_cached_greedy",
+    "feature_source": "same_forward_cached_greedy",
+    "dataset": "tatsu-lab/alpaca_eval",
+    "dataset_revision": "2edc6fad8be6b14ea7230aabfd08188da6b8b814",
+    "collection_complete": true,
+    "expected_prompt_ids": [
+      736,
+      375,
+      679,
+      588,
+      648,
+      728,
+      359,
+      713,
+      452,
+      737,
+      437,
+      301,
+      763,
+      577,
+      24,
+      177,
+      657,
+      722,
+      105,
+      400,
+      88,
+      782,
+      423,
+      200,
+      201,
+      443,
+      231,
+      239,
+      377,
+      64,
+      374,
+      734,
+      229,
+      619,
+      625,
+      383,
+      236,
+      632,
+      680,
+      221,
+      446,
+      501,
+      463,
+      593,
+      280,
+      515,
+      191,
+      403,
+      376,
+      78,
+      212,
+      440,
+      458,
+      592,
+      392,
+      391,
+      381,
+      302,
+      150,
+      607,
+      36,
+      804,
+      185,
+      172,
+      180,
+      92,
+      9,
+      454,
+      50,
+      669,
+      74,
+      13,
+      293,
+      174,
+      431,
+      771,
+      404,
+      475,
+      277,
+      265,
+      385,
+      576,
+      687,
+      629,
+      232,
+      787,
+      751,
+      357,
+      706,
+      509,
+      213,
+      641,
+      696,
+      247,
+      8,
+      355,
+      28,
+      752,
+      365,
+      523,
+      496,
+      524,
+      393,
+      10,
+      703,
+      386,
+      424,
+      264,
+      563,
+      173,
+      406,
+      290,
+      544,
+      58,
+      584,
+      705,
+      666,
+      33,
+      439,
+      23,
+      325,
+      110,
+      17,
+      198,
+      620,
+      608,
+      358,
+      740,
+      578,
+      162,
+      42,
+      730,
+      263,
+      148,
+      583,
+      627,
+      678,
+      571,
+      415,
+      483,
+      312,
+      532,
+      137,
+      506,
+      672,
+      419,
+      354,
+      590,
+      467,
+      487,
+      241,
+      5,
+      149,
+      606,
+      272,
+      560,
+      536,
+      724,
+      119,
+      411,
+      84,
+      528,
+      507,
+      16,
+      775,
+      39,
+      237,
+      307,
+      596,
+      294,
+      368,
+      138,
+      401,
+      85,
+      579,
+      527,
+      715,
+      315,
+      777,
+      188,
+      488,
+      520,
+      124,
+      676,
+      611,
+      662,
+      557,
+      395,
+      256,
+      720,
+      190,
+      40,
+      656,
+      140,
+      508,
+      129,
+      184,
+      249,
+      340,
+      193,
+      530,
+      152,
+      711,
+      316,
+      350,
+      586,
+      227,
+      493,
+      796,
+      31,
+      485,
+      327,
+      333,
+      118,
+      132,
+      640,
+      599,
+      45,
+      56,
+      636,
+      781,
+      306,
+      503,
+      192,
+      798,
+      397,
+      311,
+      504,
+      550,
+      251,
+      425,
+      652,
+      800,
+      644,
+      553,
+      49,
+      147,
+      547,
+      474,
+      106,
+      335,
+      378,
+      649,
+      689,
+      477
+    ],
+    "split": "calib",
+    "input_prompt_sha256": "a56dbf9c26652605407e0706727e09b7af147c78c4623ddb8ecc66cd945a88be",
+    "prompt_sha256": "60dacd36bb5bb2ddc881f31c4ec59b127fec744400cdbc0ebefc227f81f5af64",
+    "coverage": [
+      {
+        "prompt_id": 736,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 375,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 679,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 588,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 648,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 728,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 359,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 713,
+        "tokens": 14,
+        "positions": 9
+      },
+      {
+        "prompt_id": 452,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 737,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 437,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 301,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 763,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 577,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 24,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 177,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 657,
+        "tokens": 61,
+        "positions": 56
+      },
+      {
+        "prompt_id": 722,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 105,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 400,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 88,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 782,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 423,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 200,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 201,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 443,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 231,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 239,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 377,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 64,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 374,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 734,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 229,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 619,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 625,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 383,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 236,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 632,
+        "tokens": 35,
+        "positions": 30
+      },
+      {
+        "prompt_id": 680,
+        "tokens": 63,
+        "positions": 58
+      },
+      {
+        "prompt_id": 221,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 446,
+        "tokens": 62,
+        "positions": 57
+      },
+      {
+        "prompt_id": 501,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 463,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 593,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 280,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 515,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 191,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 403,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 376,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 78,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 212,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 440,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 458,
+        "tokens": 18,
+        "positions": 13
+      },
+      {
+        "prompt_id": 592,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 392,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 391,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 381,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 302,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 150,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 607,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 36,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 804,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 185,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 172,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 180,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 92,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 9,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 454,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 50,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 669,
+        "tokens": 22,
+        "positions": 17
+      },
+      {
+        "prompt_id": 74,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 667,
+        "tokens": 3,
+        "positions": 0
+      },
+      {
+        "prompt_id": 13,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 293,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 174,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 431,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 771,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 404,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 475,
+        "tokens": 32,
+        "positions": 27
+      },
+      {
+        "prompt_id": 277,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 265,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 385,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 576,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 687,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 629,
+        "tokens": 28,
+        "positions": 23
+      },
+      {
+        "prompt_id": 232,
+        "tokens": 9,
+        "positions": 4
+      },
+      {
+        "prompt_id": 787,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 751,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 357,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 706,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 509,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 213,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 641,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 696,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 247,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 8,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 355,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 28,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 752,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 365,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 523,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 496,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 524,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 393,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 10,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 703,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 386,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 424,
+        "tokens": 60,
+        "positions": 55
+      },
+      {
+        "prompt_id": 264,
+        "tokens": 57,
+        "positions": 52
+      },
+      {
+        "prompt_id": 563,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 173,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 406,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 638,
+        "tokens": 4,
+        "positions": 0
+      },
+      {
+        "prompt_id": 290,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 262,
+        "tokens": 2,
+        "positions": 0
+      },
+      {
+        "prompt_id": 544,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 58,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 584,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 705,
+        "tokens": 58,
+        "positions": 53
+      },
+      {
+        "prompt_id": 666,
+        "tokens": 15,
+        "positions": 10
+      },
+      {
+        "prompt_id": 33,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 439,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 23,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 325,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 110,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 17,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 198,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 620,
+        "tokens": 21,
+        "positions": 16
+      },
+      {
+        "prompt_id": 608,
+        "tokens": 33,
+        "positions": 28
+      },
+      {
+        "prompt_id": 358,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 740,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 578,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 162,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 42,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 730,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 263,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 148,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 583,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 627,
+        "tokens": 40,
+        "positions": 35
+      },
+      {
+        "prompt_id": 678,
+        "tokens": 53,
+        "positions": 48
+      },
+      {
+        "prompt_id": 571,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 415,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 483,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 312,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 532,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 137,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 506,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 672,
+        "tokens": 18,
+        "positions": 13
+      },
+      {
+        "prompt_id": 419,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 354,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 590,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 467,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 487,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 241,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 5,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 149,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 606,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 272,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 560,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 536,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 724,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 119,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 411,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 84,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 528,
+        "tokens": 56,
+        "positions": 51
+      },
+      {
+        "prompt_id": 507,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 16,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 775,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 39,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 237,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 307,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 596,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 294,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 368,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 138,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 401,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 85,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 579,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 527,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 715,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 315,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 777,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 188,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 488,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 520,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 124,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 676,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 611,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 662,
+        "tokens": 10,
+        "positions": 5
+      },
+      {
+        "prompt_id": 557,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 395,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 256,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 720,
+        "tokens": 50,
+        "positions": 45
+      },
+      {
+        "prompt_id": 190,
+        "tokens": 10,
+        "positions": 5
+      },
+      {
+        "prompt_id": 40,
+        "tokens": 45,
+        "positions": 40
+      },
+      {
+        "prompt_id": 656,
+        "tokens": 20,
+        "positions": 15
+      },
+      {
+        "prompt_id": 140,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 508,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 129,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 184,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 249,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 340,
+        "tokens": 54,
+        "positions": 49
+      },
+      {
+        "prompt_id": 193,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 530,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 152,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 711,
+        "tokens": 24,
+        "positions": 19
+      },
+      {
+        "prompt_id": 316,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 350,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 586,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 227,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 493,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 796,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 31,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 485,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 327,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 333,
+        "tokens": 14,
+        "positions": 9
+      },
+      {
+        "prompt_id": 118,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 132,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 640,
+        "tokens": 26,
+        "positions": 21
+      },
+      {
+        "prompt_id": 599,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 45,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 56,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 636,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 199,
+        "tokens": 2,
+        "positions": 0
+      },
+      {
+        "prompt_id": 781,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 306,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 503,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 192,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 798,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 397,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 311,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 504,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 550,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 251,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 425,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 652,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 800,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 644,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 553,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 49,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 147,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 547,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 474,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 106,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 335,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 378,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 649,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 689,
+        "tokens": 64,
+        "positions": 59
+      },
+      {
+        "prompt_id": 477,
+        "tokens": 59,
+        "positions": 54
+      }
+    ]
+  },
+  "split": "exact manifest",
+  "train_prompts": 196,
+  "val_prompts": 49,
+  "count_alpha": 3.0,
+  "logistic_C": 0.1,
+  "rank_cap": 4,
+  "direct_pool": "direct: MEDUSA+ pool",
+  "pool_budget": 64,
+  "pool_steps": 4000,
+  "seed": 0
+}

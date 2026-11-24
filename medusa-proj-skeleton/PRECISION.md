@@ -1,5 +1,16 @@
 # Precision investigation and handoff
 
+## Current status (2026-11-23)
+
+The latest main includes compatible Stage 1 FP32 NPZ samples (5 calibration,
+3 evaluation prompts), with CPU structure/hash/prompt-binding checks passing.
+The committed broader GPU checks failed: 15/20 pilot and 6/7 known prompts pass.
+Those failures supersede any inference that the historical fixed-tree 20/20
+pilot certified the full pipeline. FP32 remains provisional.
+See [FINAL_EXPERIMENTS.md](FINAL_EXPERIMENTS.md) for corrected prompt splits,
+CPU preparation, and the untimed trained-policy gate before latency runs.
+The older dated evidence below is retained as history.
+
 ## Current data status before merge (2026-11-02)
 
 Main at 66d6232 now includes all 20 FP32 pilot node JSON files (32,806

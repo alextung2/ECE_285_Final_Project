@@ -1,0 +1,53 @@
+{
+  "base_commit": "98c34c2084e821541749aa0f5e7f6da66669b76e",
+  "date": "2026-11-23",
+  "platform": "Windows-11-10.0.26200-SP0",
+  "python": "3.13.14",
+  "packages": {
+    "numpy": "2.2.2",
+    "scikit-learn": "1.6.1",
+    "torch": "2.13.0",
+    "pytest": "9.2.0"
+  },
+  "gpu_validation_performed": false,
+  "formal_real_fit_performed": false,
+  "final_latency_benchmark_performed": false,
+  "synthetic_pipelines": {
+    "cli": {
+      "source": "synthetic",
+      "comparisons": 25,
+      "methods": 5,
+      "budgets": [
+        8,
+        16,
+        32,
+        63,
+        96
+      ],
+      "calibration_prompts": 20,
+      "calibration_steps": 400,
+      "evaluation_prompts": 8,
+      "evaluation_steps_available": 160,
+      "evaluation_steps_compared": 20,
+      "final_research_result": false
+    },
+    "notebook": {
+      "source": "synthetic",
+      "comparisons": 25,
+      "methods": 5,
+      "budgets": [
+        8,
+        16,
+        32,
+        63,
+        96
+      ],
+      "calibration_prompts": 20,
+      "calibration_steps": 400,
+      "evaluation_prompts": 8,
+      "evaluation_steps_available": 160,
+      "evaluation_steps_compared": 20,
+      "final_research_result": false
+    }
+  }
+}

@@ -1,0 +1,8 @@
+\input{live_agreement}
+
+\textbf{Measured decoding speed.} The table gives generated tokens per second, throughput divided by cached greedy in the same budget run, and exact output matches out of eight measured questions. Higher throughput is better.
+\input{tables/timing}
+
+At $B=16$, MEDUSA+ was the fastest speculative policy at 9.60 tokens/s, versus 9.92 for greedy. At $B=63$, the fixed marginal tree led the speculative policies at 8.98 tokens/s, versus 10.64 for greedy. The gain in the fixed conditional tree's offline acceptance did not translate into higher throughput at either budget. On the timed $B=63$ panel, fixed marginal and fixed conditional committed 2.469 and 2.444 tokens per live round, respectively. Both the states visited and the set of prompts differ from full replay.
+
+The separate profile of the first measured prompt at $B=63$ recorded 0.10 ms per round for the fixed conditional tree, 8.06 ms for MEDUSA+ and 20.42 ms for dynamic conditional scoring and buffer handling. At $B=16$ the corresponding values were 0.08, 2.57 and 6.90 ms. This overhead helps explain why the learned dynamic policy can be slower at similar acceptance. The two greedy baselines also differed, which is why each throughput ratio uses the baseline measured within its own budget run.

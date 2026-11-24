@@ -39,7 +39,8 @@ def main():
     del saved, actual_heads
     print('Trained Medusa head weights verified.', flush=True)
     rows, limit = [], 64
-    notebook = Path(__file__).resolve().parents[2] / 'ece285_Medusa_Project.ipynb'
+    notebook = (Path(__file__).resolve().parents[2] / 'medusa_trace_collection'
+                / 'medusa_pilot_validation_and_trace_collection.ipynb')
     saved_lengths = []
     if notebook.exists():
         cells = json.loads(notebook.read_text(encoding='utf-8'))['cells']

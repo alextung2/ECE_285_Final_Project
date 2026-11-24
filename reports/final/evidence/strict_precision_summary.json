@@ -1,0 +1,160 @@
+{
+  "known": {
+    "passed": 7,
+    "tested": 7,
+    "rows": [
+      {
+        "prompt": "Explain what a robot is in one sentence.",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 55,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "What is the difference between weather and climate?",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 120,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "Explain why the sky appears blue.",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 159,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "Translate 'Good morning, how are you?' into French.",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 50,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "Write a Python function that returns the square of a number.",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 112,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "Write a short story about a lost key.",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 146,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "What breed dog is smallest?",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 213,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      }
+    ]
+  },
+  "archived_failed_pilot_subset": {
+    "passed": 4,
+    "tested": 5,
+    "rows": [
+      {
+        "prompt": "What factors would you consider when designing an inclusive and accessible public transportation system?",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 148,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "How can I increase my productivity while working from home?",
+        "passed": false,
+        "findings": [
+          "rank changes"
+        ],
+        "policies_completed": 6,
+        "inspected_rounds": 119,
+        "rank_change_rounds": 1,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 1,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "How can governments utilize fiscal and monetary policies to combat economic recessions?",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 153,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "What breed dog is smallest?",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 213,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      },
+      {
+        "prompt": "Where is Indonesia?",
+        "passed": true,
+        "findings": [],
+        "policies_completed": 6,
+        "inspected_rounds": 185,
+        "rank_change_rounds": 0,
+        "prefix_disagreements": 0,
+        "label_disagreements": 0,
+        "recorded_changed_slots": 0,
+        "changed_selected_slots": 0
+      }
+    ]
+  }
+}

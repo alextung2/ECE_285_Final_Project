@@ -7,6 +7,7 @@ Outputs (in <out_dir>/diagnose/):
 """
 
 import numpy as np
+import json
 from _common import parse, write_table
 
 
@@ -14,9 +15,11 @@ def main():
     args, cfg = parse(__doc__)
     from mcal.config import out_path
     from mcal.diagnose import conditional_vs_marginal, product_vs_joint
-    from mcal.traces import TraceSet
 
-    ts = TraceSet.load(out_path(cfg, cfg["traces"]["calib"]["file"]))
+    from mcal.audit import audit_file
+    ts, audit = audit_file(out_path(cfg, cfg["traces"]["calib"]["file"]), cfg, args.synthetic)
+    out_path(cfg, "diagnose", "metadata.json").write_text(json.dumps(
+        dict(input_audit=audit, config=cfg, timing_benchmark=False), indent=2))
     print(ts.summary())
 
     rows = product_vs_joint(ts, max_depth=3, max_rank=3)

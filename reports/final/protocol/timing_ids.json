@@ -1,0 +1,38 @@
+[
+  {
+    "question_id": 82,
+    "category": "writing"
+  },
+  {
+    "question_id": 81,
+    "category": "writing"
+  },
+  {
+    "question_id": 91,
+    "category": "roleplay"
+  },
+  {
+    "question_id": 101,
+    "category": "reasoning"
+  },
+  {
+    "question_id": 111,
+    "category": "math"
+  },
+  {
+    "question_id": 121,
+    "category": "coding"
+  },
+  {
+    "question_id": 131,
+    "category": "extraction"
+  },
+  {
+    "question_id": 141,
+    "category": "stem"
+  },
+  {
+    "question_id": 151,
+    "category": "humanities"
+  }
+]

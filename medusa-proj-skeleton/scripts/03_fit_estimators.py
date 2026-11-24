@@ -34,8 +34,8 @@ def main():
     require_compatible(contract, require_trace_config(evals, cfg, args.synthetic))
     from mcal.audit import audit_file, audit_pair
     from mcal.handoff import split_calibration
-    audit_file(out_path(cfg, cfg["traces"]["calib"]["file"]), cfg, args.synthetic)
-    audit_file(out_path(cfg, cfg["traces"]["eval"]["file"]), cfg, args.synthetic)
+    _, calib_audit = audit_file(out_path(cfg, cfg["traces"]["calib"]["file"]), cfg, args.synthetic)
+    _, eval_audit = audit_file(out_path(cfg, cfg["traces"]["eval"]["file"]), cfg, args.synthetic)
     audit_pair(calib, evals)
     fit, held = split_calibration(calib, ecfg.get("manifest"), ecfg["val_frac"], cfg["seed"])
     print(f"fit: {fit.n_steps} steps | held-out calib: {held.n_steps} | eval: {evals.n_steps}")
@@ -64,6 +64,7 @@ def main():
     import hashlib
     manifest = ecfg.get("manifest")
     provenance = dict(execution_contract=contract, feature_schema=FEATURE_SCHEMA,
+                      input_audits=dict(calib=calib_audit, evaluation=eval_audit),
                       source="synthetic" if args.synthetic else "real_traces", config=cfg,
                       fit_prompt_ids=np.unique(fit.prompt_id).tolist(),
                       validation_prompt_ids=np.unique(held.prompt_id).tolist(),

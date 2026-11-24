@@ -1,5 +1,16 @@
 # Ada integration and the GPU handoff
 
+## Current handoff (2026-11-23)
+
+Both the CLI and integrated notebook complete CPU synthetic runs, including all
+five scorers and budgets. Lucia's new Stage 1 FP32 NPZ samples load and produce
+valid feature batches, but cannot support final fitting until GPU correctness
+is resolved. Use [FINAL_EXPERIMENTS.md](FINAL_EXPERIMENTS.md) for the current
+workflow and prepared manifests. It records the removal of training prompt 801
+from new runs because its text duplicates MT-Bench question 81. The original
+200/50 split and old artifacts remain preserved. Do not use the original
+manifest for the new 199/50 run.
+
 ## Current data status before merge (2026-11-02)
 
 Main at 66d6232 now includes all 20 FP32 pilot node JSON files (32,806

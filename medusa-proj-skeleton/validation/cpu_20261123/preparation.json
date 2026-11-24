@@ -1,0 +1,30 @@
+{
+  "prepared_only": true,
+  "gpu_validation_performed": false,
+  "precision_gate_passed": false,
+  "train_prompts": 199,
+  "validation_prompts": 50,
+  "eval_prompts": 80,
+  "exclusions": [
+    {
+      "split": "train",
+      "prompt_id": 801,
+      "evaluation_prompt_ids": [
+        81
+      ],
+      "instruction": "Compose an engaging travel blog post about a recent trip to Hawaii, highlighting cultural experiences and must-see attractions.",
+      "reason": "evaluation text overlap"
+    }
+  ],
+  "text_overlap_check": "No exact or Unicode/case/whitespace-normalized text overlap; semantic overlap not assessed",
+  "mtbench_source": "https://raw.githubusercontent.com/lm-sys/FastChat/v0.2.36/fastchat/llm_judge/data/mt_bench/question.jsonl",
+  "max_new_tokens": 64,
+  "sha256": {
+    "calib_full.json": "cc7c3c7975b75adc4c8166f15c9e138f6404eda44fe1f0b908564b6488c8359e",
+    "eval_full.json": "a24e321481dad350e72a4f7ce63756136e11d19d905b919fb39fbb2d5c07e6e7",
+    "mt_bench_question.jsonl": "119565adbab82227089cefdb44c8d7e2cf04dc0a0ec233634c82e7d4e2a944f7",
+    "original_split_manifest.json": "42177fa5a26f5aa5f51dd78167a4f2235b9b8d7e48687c4bb027b6d46844dfe0",
+    "split_manifest.json": "8e8b3902d4f0eb0df341472d738e4234c0a6e82f4508eb39baf618a993f7dd4b",
+    "timing_prompts.json": "09c8b0231d8ae27c958b94b5382c843bfb663727df0c34b01b3dba0a046d9188"
+  }
+}
