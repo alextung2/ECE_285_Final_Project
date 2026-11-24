@@ -1,0 +1,19 @@
+\input{dependence}
+
+\subsection{Matched-budget replay on MT-Bench}
+Each column below gives mean accepted tokens per complete-horizon state at the indicated number of draft nodes. The two calibration measures use one common path pool across budgets. All 80 evaluation questions contributed, with a median of 59 complete states per question and a range of 1 to 59.
+\input{tables/acceptance}
+
+The conditional count table beat the marginal fixed tree at all five budgets. Its largest absolute gain occurred at $B=8$, where acceptance rose from 2.106 to 2.150 tokens per state (a 2.10\% relative gain). At the native-sized budget of 63, the fixed gain was $+0.0192$ (95\% paired interval $[0.0063,0.0341]$). MEDUSA+ still had higher acceptance than either fixed tree at every budget. At $B=63$, conditioning the dynamic logistic model changed acceptance from 2.7264 to 2.7306 ($+0.0042$, interval $[-0.0009,0.0090]$). The direct classifier reached 2.7299. These small differences leave the ordering of the dynamic methods uncertain.
+
+\begin{figure}[htbp]
+\centering\includegraphics[width=.94\linewidth]{tables/paired_acceptance.pdf}
+\caption{Change in accepted tokens per reference state at equal draft budgets. Bars show per-budget 95\% paired prompt-bootstrap intervals. Both panels use the same vertical scale.}
+\end{figure}
+
+\input{calibration}
+
+\subsection{Live verification and throughput}
+\input{precision}
+
+\input{online_results}

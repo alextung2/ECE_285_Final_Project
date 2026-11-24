@@ -1,0 +1,145 @@
+{
+  "execution_contract": {
+    "schema_version": 1,
+    "model": "FasterDecoding/medusa-vicuna-7b-v1.3",
+    "precision_mode": "nf4_fp32_from_fp16",
+    "weight_storage": "nf4",
+    "double_quant": true,
+    "initial_dtype": "float16",
+    "compute_dtype": "float32",
+    "head_dtype": "float32",
+    "lm_head_fp32_input_hook": true,
+    "promotion": "floating_parameters_and_buffers",
+    "tf32": false,
+    "rank_order": "raw_logits_topk",
+    "probability_dtype": "float32",
+    "prompt_template": "vicuna_v1.1",
+    "temperature": 0.0,
+    "packages": {
+      "torch": "2.2.2+cu118",
+      "transformers": "4.36.2",
+      "bitsandbytes": "0.43.3",
+      "accelerate": "0.27.2"
+    },
+    "medusa_source_sha256": {
+      "medusa_model.py": "2185b09681c8adca3a26b8358e459530c0d083d13265cc9fc348c4b0e1dfbcf9",
+      "utils.py": "e28d3b949a976791e09419d422e06ba82c7d30e50b62e90b7f1fb957688372fd",
+      "kv_cache.py": "e84881b1e7789ecd461d51d59fec166b181274be67d0ee4728b06da1d082e1f3",
+      "modeling_llama_kv.py": "ebcaae08102054b78338bf2af36117db03b256de7f5229ad7b79b1efeaa4b853"
+    },
+    "loaded_heads_sha256": "cbc9046f1e3d1bda81f8ff09f8f568b353567724a80daa349b96a61485d0c476",
+    "base_revision": "236eeeab96f0dc2e463f2bebb7bb49809279c6d6"
+  },
+  "precision_audit": {
+    "linear4bit_count": 224,
+    "compute_dtype": "torch.float32",
+    "lm_head_fp32_input_hook": true,
+    "floating_buffer_dtypes": [
+      "torch.float32"
+    ],
+    "lm_head_dtype": "torch.float32",
+    "medusa_head_dtypes": [
+      "torch.float32"
+    ]
+  },
+  "config": {
+    "seed": 0,
+    "out_dir": "C:\\Users\\alex_tung\\OneDrive\\\u6587\u4ef6\\New project\\ECE285-final-study\\medusa-proj-skeleton\\outputs\\final_tuned\\real",
+    "model": {
+      "name": "FasterDecoding/medusa-vicuna-7b-v1.3",
+      "precision_mode": "nf4_fp32_from_fp16",
+      "dtype": "float16",
+      "device_map": "auto",
+      "load_in_4bit": true
+    },
+    "traces": {
+      "topk": 10,
+      "max_new_tokens": 64,
+      "keep_tokens": true,
+      "calib": {
+        "dataset": "tatsu-lab/alpaca_eval",
+        "n_prompts": 249,
+        "file": "traces/calib.npz",
+        "dataset_revision": "2edc6fad8be6b14ea7230aabfd08188da6b8b814",
+        "prompt_file": "C:\\Users\\alex_tung\\OneDrive\\\u6587\u4ef6\\New project\\ECE285-final-study\\medusa-proj-skeleton\\outputs\\final_frozen\\prompts\\calib_full.json"
+      },
+      "eval": {
+        "dataset": "mtbench",
+        "path": "data/mt_bench_question.jsonl",
+        "n_prompts": 80,
+        "file": "traces/eval.npz",
+        "dataset_revision": "sha256:119565adbab82227089cefdb44c8d7e2cf04dc0a0ec233634c82e7d4e2a944f7",
+        "prompt_file": "C:\\Users\\alex_tung\\OneDrive\\\u6587\u4ef6\\New project\\ECE285-final-study\\medusa-proj-skeleton\\outputs\\final_frozen\\prompts\\eval_full.json"
+      },
+      "synthetic": {
+        "n_prompts_calib": 300,
+        "n_prompts_eval": 80,
+        "steps_per_prompt": 120,
+        "n_heads": 5,
+        "dependence": 1.0
+      }
+    },
+    "estimators": {
+      "manifest": "C:\\Users\\alex_tung\\OneDrive\\\u6587\u4ef6\\New project\\ECE285-final-study\\medusa-proj-skeleton\\outputs\\final_frozen\\prompts\\split_manifest.json",
+      "val_frac": 0.8,
+      "count_cond": {
+        "alpha": 20.0
+      },
+      "logistic_cond": {
+        "C": 1.0,
+        "rank_cap": 4
+      },
+      "direct": {
+        "C": 1.0,
+        "rank_cap": 4,
+        "monotone": true
+      },
+      "pool": {
+        "self_retrain": false,
+        "reference": "medusa_plus",
+        "budget": 64,
+        "n_steps": 4000
+      }
+    },
+    "compare": {
+      "budgets": [
+        16,
+        63
+      ],
+      "eval_steps": 6000
+    },
+    "speed": {
+      "methods": [
+        "medusa_acc",
+        "medusa_plus",
+        "count_cond",
+        "logistic_cond",
+        "direct"
+      ],
+      "n_prompts": 8,
+      "max_new_tokens": 64,
+      "budget": 16,
+      "warmup_prompts": 1,
+      "prompt_file": "../reports/final/protocol/timing_stratified.json"
+    }
+  },
+  "packages": {
+    "torch": "2.2.2+cu118",
+    "transformers": "4.36.2",
+    "bitsandbytes": "0.43.3",
+    "numpy": "1.26.4"
+  },
+  "platform": "Windows-10-10.0.26200-SP0",
+  "trained_artifacts_sha256": {
+    "fixed_tree_medusa_acc_B16.json": "a4a3b354afef429da1cf2d738badbd720c6a6c05ca4dca38ae2ccdad740365ee",
+    "fixed_tree_count_cond_B16.json": "05e51b02ae0e01b2a512d6a63714c0a7053a1468fb4db572238d7e5aa36bd839",
+    "logistic_cond.pkl": "df671321f228a40297cddfda34ecc30c464138554a628ac3e3ca54fd088788b0",
+    "direct.pkl": "ae2d42ac6473153274bc95b143aec5a97910ac67c50e5e97cc1bf8602ea147ee"
+  },
+  "gpu": "NVIDIA GeForce RTX 3080 Ti Laptop GPU",
+  "cuda": "11.8",
+  "prompt_sha256": "423cfa0ae29dfdba88d616d17087a3dbe939834875f0a671d496a4b682e5f1a0",
+  "timing": "Prefill + generation; excludes model load, tokenization, KV allocation and fixed-buffer setup.",
+  "overhead": "Separate synchronized run on first measured prompt; includes policy and buffer lookup/build.",
+  "note": "Hardware-specific preliminary results. Default tree retains its native budget; inspect draft_budget."
+}

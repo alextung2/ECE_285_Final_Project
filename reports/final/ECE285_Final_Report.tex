@@ -1,0 +1,45 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.9in]{geometry}
+\input{glyphtounicode}
+\pdfgentounicode=1
+\usepackage{amsmath,booktabs,graphicx}
+\usepackage[colorlinks=true,urlcolor=blue,linkcolor=black,citecolor=black]{hyperref}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{0.45em}
+\title{Conditional Acceptance Calibration for Dynamic Medusa Decoding}
+\author{ECE 285 project team\\Ada Qi, Alexander Tung, and Zhuoting Yang\\University of California San Diego}
+\date{November 2026}
+\begin{document}
+\maketitle
+\begin{abstract}
+\input{findings}
+\end{abstract}
+\section{Which branches should a verifier check?}
+Medusa predicts several future tokens from one hidden state. A verifier evaluates a tree of candidate continuations in parallel and commits its longest matching prefix. Each extra draft node consumes verification capacity. With a fixed capacity, the choice between a likely sibling and a deeper continuation therefore affects how many tokens a round can commit. We study that choice on a frozen Vicuna-7B Medusa-1 checkpoint. Only the rule for scoring branches changes.
+
+Medusa uses head accuracy to construct a fixed tree \cite{medusa}. Dynamic tree attention permits a different tree at each state \cite{plus}. Classifier-based tree construction can also use features beyond a product of token probabilities \cite{direct}. To isolate the effect of scoring, our implementation uses the same five frozen heads, ten candidate ranks per head, best-first tree builder, and draft-node budgets for every policy. The direct classifier is a matched-budget adaptation inspired by C2T.
+\section{Scoring and selecting paths}
+At a state $x$, let $S_v$ be the event that the rank path $v=(r_1,\ldots,r_d)$ matches the next $d$ draft targets following the backbone token. Acceptance of a child entails acceptance of its parent. The chain rule gives
+\[
+ P(S_v\mid x)=\prod_{i=1}^{d}P(S_{v_{1:i}}\mid S_{v_{1:i-1}},x).
+\]
+The first parent is always accepted. The expected token count for a prefix-closed tree $T$ is
+$1+\sum_{v\in T}P(S_v\mid x)$ by linearity of expectation. The one counts the backbone token. With monotone scores, best-first expansion selects the highest-scoring feasible frontier node at each step. Every hidden descendant scores at most as high as its frontier ancestor. Induction therefore gives a maximum-score prefix-closed set of $B$ nodes. Maximizing actual expected acceptance additionally requires accurate ordering of path probabilities.
+
+\textbf{Fixed policies.} The marginal baseline multiplies per-head rank hit rates from training. The count estimator fits a conditional hit rate among states in which the parent matched. It groups examples by depth, preceding rank and child rank, and shrinks sparse cells toward the marginal baseline. Each estimator yields one tree per budget.
+
+\textbf{Dynamic policies.} MEDUSA+ multiplies current head probabilities along the path. Conditional logistic regression fits the probability of a child hit on accepted-parent examples and multiplies its fitted factors. The direct logistic classifier predicts the whole-path label on a candidate pool and caps each child score at its parent's score. Both logistic methods use the repository's grouped rank and confidence features. The learned scores can change the tree at each state.
+\section{Experimental design}
+\input{design}
+\section{Results}
+\input{results}
+\section{Interpretation and limitations}
+\input{discussion}
+\begin{thebibliography}{9}
+\bibitem{medusa} T. Cai et al. Medusa: Simple LLM Inference Acceleration Framework with Multiple Decoding Heads. ICML, 2024. \url{https://proceedings.mlr.press/v235/cai24b.html}
+\bibitem{plus} Z. Zhang. Acceleration Multiple Heads Decoding for LLM via Dynamic Tree Attention. 2025. \url{https://arxiv.org/abs/2502.05947}
+\bibitem{direct} F. Huo et al. C2T: A Classifier-Based Tree Construction Method in Speculative Decoding. 2025. \url{https://arxiv.org/abs/2502.13652}
+\bibitem{code} ECE 285 project repository. Trace contracts, prompt manifests, calibration and verification implementations. \url{https://github.com/alextung2/ECE_285_Final_Project}
+\end{thebibliography}
+\end{document}
